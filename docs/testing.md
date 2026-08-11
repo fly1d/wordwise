@@ -7,7 +7,7 @@
 - API integration tests
 - Production web build
 - Chromium smoke test for the primary translation workflow
-- Rust compilation when desktop-owned files change
+- Rust formatting, Clippy, unit tests, and compilation when desktop-owned files change
 
 ## Release gate
 

@@ -1,4 +1,3 @@
-import cors from "cors";
 import express, { type NextFunction, type Request, type Response } from "express";
 import { rateLimit } from "express-rate-limit";
 import multer from "multer";
@@ -23,7 +22,6 @@ export function createApp(options: { serveStatic?: boolean; documentRequestLimit
     message: { error: "文档处理请求过于频繁，请稍后再试" },
   });
 
-  app.use(cors());
   app.use(express.json({ limit: "2mb" }));
 
   app.get("/api/status", async (_request, response) => {
@@ -31,6 +29,7 @@ export function createApp(options: { serveStatic?: boolean; documentRequestLimit
     response.json({
       ollama: { available: models.length > 0, models },
       openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
+      customEndpointsAllowed: false,
       defaults: providerDefaults,
     });
   });

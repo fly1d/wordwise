@@ -31,6 +31,7 @@ export type ServerStatus = {
     models: string[];
   };
   openaiConfigured: boolean;
+  customEndpointsAllowed: boolean;
   defaults: {
     ollamaUrl: string;
     ollamaModel: string;

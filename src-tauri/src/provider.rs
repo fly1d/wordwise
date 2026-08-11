@@ -1,5 +1,5 @@
 use regex::Regex;
-use reqwest::Client;
+use reqwest::{Client, Url};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{collections::HashMap, sync::OnceLock, time::Duration, time::Instant};
@@ -59,6 +59,7 @@ pub struct TranslationResult {
 pub struct DesktopStatus {
     ollama: OllamaStatus,
     openai_configured: bool,
+    custom_endpoints_allowed: bool,
     defaults: ProviderDefaults,
 }
 
@@ -81,8 +82,31 @@ fn env_or(name: &str, fallback: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| fallback.to_owned())
 }
 
-fn clean_url(url: &str) -> String {
-    url.trim_end_matches('/').to_owned()
+fn endpoint_url(base_url: &str, endpoint: &str) -> Result<Url, String> {
+    let mut url = Url::parse(base_url).map_err(|_| "模型服务地址无效".to_owned())?;
+    if !matches!(url.scheme(), "http" | "https")
+        || !url.username().is_empty()
+        || url.password().is_some()
+    {
+        return Err("模型服务地址必须使用 HTTP(S)，且不能包含用户名或密码".to_owned());
+    }
+    url.set_query(None);
+    url.set_fragment(None);
+    let mut segments = url
+        .path_segments_mut()
+        .map_err(|_| "模型服务地址不能作为 API 基础地址".to_owned())?;
+    segments.pop_if_empty();
+    for segment in endpoint.split('/').filter(|segment| !segment.is_empty()) {
+        segments.push(segment);
+    }
+    drop(segments);
+    Ok(url)
+}
+
+fn is_official_openai_url(url: &Url) -> bool {
+    url.host_str()
+        .map(|host| host == "openai.com" || host.ends_with(".openai.com"))
+        .unwrap_or(false)
 }
 
 fn client(timeout: Duration) -> Result<Client, String> {
@@ -96,11 +120,10 @@ async fn ollama_models(url: &str) -> Vec<String> {
     let Ok(http) = client(Duration::from_millis(1500)) else {
         return vec![];
     };
-    let Ok(response) = http
-        .get(format!("{}/api/tags", clean_url(url)))
-        .send()
-        .await
-    else {
+    let Ok(endpoint) = endpoint_url(url, "api/tags") else {
+        return vec![];
+    };
+    let Ok(response) = http.get(endpoint).send().await else {
         return vec![];
     };
     let Ok(value) = response.json::<Value>().await else {
@@ -319,7 +342,7 @@ async fn ollama_translate(
     model: &str,
 ) -> Result<(String, Vec<Segment>), String> {
     let response = client(Duration::from_secs(60))?
-        .post(format!("{}/api/chat", clean_url(url)))
+        .post(endpoint_url(url, "api/chat")?)
         .json(&json!({
             "model": model,
             "stream": false,
@@ -355,11 +378,12 @@ async fn openai_translate(
         "model": model,
         "messages": [{ "role": "user", "content": prompt(text, tokens)? }]
     });
-    if url.contains("openai.com") {
+    let endpoint = endpoint_url(url, "chat/completions")?;
+    if is_official_openai_url(&endpoint) {
         body["response_format"] = json!({ "type": "json_object" });
     }
     let response = client(Duration::from_secs(60))?
-        .post(format!("{}/chat/completions", clean_url(url)))
+        .post(endpoint)
         .bearer_auth(api_key)
         .json(&body)
         .send()
@@ -389,6 +413,7 @@ pub async fn desktop_status() -> DesktopStatus {
             models,
         },
         openai_configured: std::env::var("OPENAI_API_KEY").is_ok(),
+        custom_endpoints_allowed: true,
         defaults: ProviderDefaults {
             ollama_url,
             ollama_model: env_or("OLLAMA_MODEL", DEFAULT_OLLAMA_MODEL),
@@ -479,4 +504,24 @@ pub async fn desktop_translate(request: TranslationRequest) -> Result<Translatio
         elapsed_ms: started.elapsed().as_millis(),
         warning,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{endpoint_url, is_official_openai_url};
+
+    #[test]
+    fn appends_api_paths_without_string_concatenation() {
+        let url = endpoint_url("https://example.com/v1/", "/chat/completions").unwrap();
+        assert_eq!(url.as_str(), "https://example.com/v1/chat/completions");
+    }
+
+    #[test]
+    fn recognizes_only_the_openai_domain_boundary() {
+        let official = endpoint_url("https://api.openai.com/v1", "chat/completions").unwrap();
+        let spoofed =
+            endpoint_url("https://api.openai.com.example.test/v1", "chat/completions").unwrap();
+        assert!(is_official_openai_url(&official));
+        assert!(!is_official_openai_url(&spoofed));
+    }
 }

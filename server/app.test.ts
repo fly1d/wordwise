@@ -10,7 +10,9 @@ describe("translation API", () => {
     expect(response.body).toMatchObject({
       ollama: { available: expect.any(Boolean), models: expect.any(Array) },
       openaiConfigured: expect.any(Boolean),
+      customEndpointsAllowed: false,
     });
+    expect(response.headers["access-control-allow-origin"]).toBeUndefined();
   });
 
   it("validates empty input", async () => {
@@ -31,6 +33,22 @@ describe("translation API", () => {
       "developers",
       "!",
     ]);
+  });
+
+  it("rejects model endpoints that are not configured by the server", async () => {
+    const response = await request(app)
+      .post("/api/translate")
+      .send({
+        text: "Hello",
+        settings: {
+          provider: "openai",
+          openaiApiKey: "test-key",
+          openaiBaseUrl: "https://api.openai.com.example.test/v1",
+        },
+      })
+      .expect(500);
+
+    expect(response.body.error).toContain("服务端环境变量");
   });
 
   it("extracts text documents", async () => {
