@@ -98,9 +98,13 @@ export default function App() {
         setStatus(nextStatus);
         setSettings((current) => ({
           ...current,
-          ollamaUrl: current.ollamaUrl || nextStatus.defaults.ollamaUrl,
+          ollamaUrl: nextStatus.customEndpointsAllowed
+            ? current.ollamaUrl || nextStatus.defaults.ollamaUrl
+            : nextStatus.defaults.ollamaUrl,
           ollamaModel: current.ollamaModel || nextStatus.defaults.ollamaModel,
-          openaiBaseUrl: current.openaiBaseUrl || nextStatus.defaults.openaiBaseUrl,
+          openaiBaseUrl: nextStatus.customEndpointsAllowed
+            ? current.openaiBaseUrl || nextStatus.defaults.openaiBaseUrl
+            : nextStatus.defaults.openaiBaseUrl,
           openaiModel: current.openaiModel || nextStatus.defaults.openaiModel,
         }));
       })
@@ -447,7 +451,11 @@ export default function App() {
                 </div>
                 <label>
                   <span>服务地址</span>
-                  <input value={settings.ollamaUrl} onChange={(event) => updateSetting("ollamaUrl", event.target.value)} />
+                  <input
+                    value={settings.ollamaUrl}
+                    readOnly={status?.customEndpointsAllowed === false}
+                    onChange={(event) => updateSetting("ollamaUrl", event.target.value)}
+                  />
                 </label>
                 <label>
                   <span>模型</span>
@@ -467,7 +475,11 @@ export default function App() {
                 </div>
                 <label>
                   <span>API 地址</span>
-                  <input value={settings.openaiBaseUrl} onChange={(event) => updateSetting("openaiBaseUrl", event.target.value)} />
+                  <input
+                    value={settings.openaiBaseUrl}
+                    readOnly={status?.customEndpointsAllowed === false}
+                    onChange={(event) => updateSetting("openaiBaseUrl", event.target.value)}
+                  />
                 </label>
                 <label>
                   <span>模型</span>

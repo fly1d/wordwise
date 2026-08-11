@@ -56,10 +56,13 @@ ollama serve
 服务端环境变量示例：
 
 ```bash
+OLLAMA_BASE_URL=http://127.0.0.1:11434 \
+OPENAI_BASE_URL=https://api.openai.com/v1 \
 OPENAI_API_KEY=... OPENAI_MODEL=gpt-5-mini npm run dev
 ```
 
 API Key 不会写入浏览器存储。公共云端凭据不得编译到前端或桌面安装包中。
+Web 服务只会请求上述服务端环境变量配置的模型地址，页面中地址为只读；这可防止浏览器借用本地 API 访问其他内网服务。macOS 客户端直接在本机发起模型请求，仍允许用户在设置中修改兼容 API 地址。
 
 ## 质量门禁
 

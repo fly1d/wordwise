@@ -14,9 +14,7 @@ Before opening a pull request:
 ```bash
 npm run check
 npm run test:smoke
-cargo check --manifest-path src-tauri/Cargo.toml
-cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
-cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings
+npm run desktop:check
 ```
 
 ## Review policy

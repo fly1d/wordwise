@@ -18,16 +18,50 @@ export const providerDefaults = {
   openaiModel: DEFAULT_OPENAI_MODEL,
 };
 
-function cleanBaseUrl(url: string) {
-  return url.replace(/\/+$/, "");
+function parseBaseUrl(value: string) {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("模型服务地址无效");
+  }
+  if ((url.protocol !== "http:" && url.protocol !== "https:") || url.username || url.password) {
+    throw new Error("模型服务地址必须使用 HTTP(S)，且不能包含用户名或密码");
+  }
+  url.search = "";
+  url.hash = "";
+  return url;
 }
 
-export function isOfficialOpenAIUrl(value: string) {
+function canonicalBaseUrl(value: string) {
+  const url = parseBaseUrl(value);
+  const path = url.pathname.split("/").filter(Boolean).join("/");
+  url.pathname = path ? `/${path}` : "/";
+  return url.toString();
+}
+
+function configuredBaseUrl(requested: string | undefined, configured: string, provider: string) {
+  if (requested && canonicalBaseUrl(requested) !== canonicalBaseUrl(configured)) {
+    throw new Error(`${provider} 服务地址必须由服务端环境变量配置`);
+  }
+  return parseBaseUrl(configured);
+}
+
+function endpointUrl(baseUrl: URL, endpoint: string) {
+  const url = new URL(baseUrl);
+  const path = [...url.pathname.split("/"), ...endpoint.split("/")]
+    .filter(Boolean)
+    .join("/");
+  url.pathname = `/${path}`;
+  return url;
+}
+
+export function isOfficialOpenAIUrl(value: string | URL) {
   const hostname = new URL(value).hostname.toLowerCase();
   return hostname === "openai.com" || hostname.endsWith(".openai.com");
 }
 
-async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = 60_000) {
+async function fetchWithTimeout(url: URL, init?: RequestInit, timeoutMs = 60_000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -37,9 +71,10 @@ async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = 60_
   }
 }
 
-export async function getOllamaModels(url = DEFAULT_OLLAMA_URL): Promise<string[]> {
+export async function getOllamaModels(): Promise<string[]> {
   try {
-    const response = await fetchWithTimeout(`${cleanBaseUrl(url)}/api/tags`, undefined, 1_500);
+    const baseUrl = configuredBaseUrl(undefined, DEFAULT_OLLAMA_URL, "Ollama");
+    const response = await fetchWithTimeout(endpointUrl(baseUrl, "api/tags"), undefined, 1_500);
     if (!response.ok) return [];
     const data = (await response.json()) as { models?: Array<{ name?: string }> };
     return (data.models ?? []).flatMap((model) => (model.name ? [model.name] : []));
@@ -110,9 +145,9 @@ async function translateWithOllama(
   tokens: Token[],
   options: TranslateOptions,
 ): Promise<TranslationPayload> {
-  const baseUrl = cleanBaseUrl(options.ollamaUrl || DEFAULT_OLLAMA_URL);
+  const baseUrl = configuredBaseUrl(options.ollamaUrl, DEFAULT_OLLAMA_URL, "Ollama");
   const model = options.ollamaModel || DEFAULT_OLLAMA_MODEL;
-  const response = await fetchWithTimeout(`${baseUrl}/api/chat`, {
+  const response = await fetchWithTimeout(endpointUrl(baseUrl, "api/chat"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -141,10 +176,10 @@ async function translateWithOpenAI(
   const apiKey = options.openaiApiKey || process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("尚未配置云端 API Key");
 
-  const baseUrl = cleanBaseUrl(options.openaiBaseUrl || DEFAULT_OPENAI_URL);
+  const baseUrl = configuredBaseUrl(options.openaiBaseUrl, DEFAULT_OPENAI_URL, "云端模型");
   const model = options.openaiModel || DEFAULT_OPENAI_MODEL;
   const isOfficialOpenAI = isOfficialOpenAIUrl(baseUrl);
-  const response = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
+  const response = await fetchWithTimeout(endpointUrl(baseUrl, "chat/completions"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -190,7 +225,7 @@ export async function translate(
     };
   }
 
-  const ollamaModels = await getOllamaModels(options.ollamaUrl || DEFAULT_OLLAMA_URL);
+  const ollamaModels = await getOllamaModels();
   const requestedModel = options.ollamaModel || DEFAULT_OLLAMA_MODEL;
   const localModel = ollamaModels.includes(requestedModel) ? requestedModel : ollamaModels[0];
 
