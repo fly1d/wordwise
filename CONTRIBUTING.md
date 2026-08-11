@@ -1,6 +1,6 @@
 # Contributing
 
-All changes are merged through pull requests. Direct pushes to `main` should be disabled with a GitHub branch protection rule.
+`main` is protected and all changes are merged through pull requests. A branch must be current with `main`, have a GitHub Review record, resolve all review conversations, and pass the required CI, browser smoke, CodeQL, and desktop checks before merging.
 
 ## Development
 
