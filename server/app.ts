@@ -82,8 +82,17 @@ export function createApp(options: { serveStatic?: boolean; documentRequestLimit
     const currentDir = dirname(fileURLToPath(import.meta.url));
     const distDir = resolve(currentDir, "../dist");
     if (existsSync(distDir)) {
+      const pageLimiter = rateLimit({
+        windowMs: 60_000,
+        limit: 120,
+        standardHeaders: "draft-8",
+        legacyHeaders: false,
+        message: "页面请求过于频繁，请稍后再试",
+      });
       app.use(express.static(distDir));
-      app.get("/{*path}", (_request, response) => response.sendFile(resolve(distDir, "index.html")));
+      app.get("/{*path}", pageLimiter, (_request, response) =>
+        response.sendFile(resolve(distDir, "index.html")),
+      );
     }
   }
 

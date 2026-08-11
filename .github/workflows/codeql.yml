@@ -44,7 +44,7 @@ jobs:
               .[]
               | .runs[]?.results[]?
               | select((.level // "warning") == "error" or (.level // "warning") == "warning")
-              | "\(.level // "warning") \(.ruleId // "unknown-rule") \(.locations[0].physicalLocation.artifactLocation.uri // "unknown-file"): \(.message.text // "No message")"
+              | "\(.level // "warning") \(.ruleId // "unknown-rule") \(.locations[0].physicalLocation.artifactLocation.uri // "unknown-file"):\(.locations[0].physicalLocation.region.startLine // 0): \(.message.text // "No message")"
             ' "$SARIF_DIR"/*.sarif
           fi
           test "$findings" -eq 0
