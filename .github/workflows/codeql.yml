@@ -9,8 +9,8 @@ on:
     - cron: "17 3 * * 1"
 
 permissions:
+  actions: read
   contents: read
-  security-events: write
 
 jobs:
   analyze:
@@ -18,7 +18,25 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
-      - uses: github/codeql-action/analyze@v3
+      - id: analyze
+        uses: github/codeql-action/analyze@v4
+        with:
+          upload: never
+      - name: Enforce CodeQL findings
+        env:
+          SARIF_DIR: ${{ steps.analyze.outputs.sarif-output }}
+        run: |
+          set -euo pipefail
+          findings="$(jq -s '
+            [
+              .[]
+              | .runs[]?.results[]?
+              | select((.level // "warning") == "error" or (.level // "warning") == "warning")
+            ]
+            | length
+          ' "$SARIF_DIR"/*.sarif)"
+          echo "CodeQL warning/error findings: $findings" >> "$GITHUB_STEP_SUMMARY"
+          test "$findings" -eq 0
