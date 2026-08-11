@@ -1,5 +1,9 @@
 # 逐词
 
+[![CI](https://github.com/fly1d/wordwise/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/fly1d/wordwise/actions/workflows/ci.yml)
+[![Desktop](https://github.com/fly1d/wordwise/actions/workflows/desktop.yml/badge.svg?branch=main)](https://github.com/fly1d/wordwise/actions/workflows/desktop.yml)
+[![CodeQL](https://github.com/fly1d/wordwise/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/fly1d/wordwise/actions/workflows/codeql.yml)
+
 本地优先的英中逐词翻译工具，提供 macOS 桌面客户端和 Web 界面。文本先被确定性拆成词元，再交给翻译引擎；模型返回会被校验，不能随意漏词或合并词语。
 
 ## 功能
@@ -74,8 +78,10 @@ npm run desktop:check
 
 所有修改通过 GitHub pull request 合并。风险分级、测试范围和发布步骤见 [CONTRIBUTING.md](CONTRIBUTING.md)、[docs/testing.md](docs/testing.md) 和 [docs/releasing.md](docs/releasing.md)。
 
+安全问题请按 [SECURITY.md](SECURITY.md) 使用 GitHub 私密漏洞报告，不要提交包含密钥、私有选区或文档内容的公开 Issue。
+
 ## 当前限制
 
 - 全局划词 beta 目前只支持 macOS。
 - 文档功能提取文字后翻译，尚未保持原文档版式导出。
-- 仓库暂未授予开源许可证；公开分发前需要由项目所有者确定许可证。
+- 仓库公开可见，但暂未授予开源许可证；除非另行说明，项目保留全部权利。
