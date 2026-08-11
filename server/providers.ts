@@ -1,0 +1,211 @@
+import { dictionaryTranslate } from "./dictionary.js";
+import type {
+  Segment,
+  Token,
+  TranslateOptions,
+  TranslationPayload,
+} from "./types.js";
+
+const DEFAULT_OLLAMA_URL = process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434";
+const DEFAULT_OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "qwen3:4b";
+const DEFAULT_OPENAI_URL = process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
+const DEFAULT_OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5-mini";
+
+export const providerDefaults = {
+  ollamaUrl: DEFAULT_OLLAMA_URL,
+  ollamaModel: DEFAULT_OLLAMA_MODEL,
+  openaiBaseUrl: DEFAULT_OPENAI_URL,
+  openaiModel: DEFAULT_OPENAI_MODEL,
+};
+
+function cleanBaseUrl(url: string) {
+  return url.replace(/\/+$/, "");
+}
+
+async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = 60_000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function getOllamaModels(url = DEFAULT_OLLAMA_URL): Promise<string[]> {
+  try {
+    const response = await fetchWithTimeout(`${cleanBaseUrl(url)}/api/tags`, undefined, 1_500);
+    if (!response.ok) return [];
+    const data = (await response.json()) as { models?: Array<{ name?: string }> };
+    return (data.models ?? []).flatMap((model) => (model.name ? [model.name] : []));
+  } catch {
+    return [];
+  }
+}
+
+function makePrompt(text: string, tokens: Token[]) {
+  return `你是严谨的英中逐词翻译器。将下面英文按语境翻译成简体中文。
+
+必须遵守：
+1. 输出合法 JSON 对象，不要 Markdown，不要解释。
+2. segments 必须与给定 tokens 一一对应，数量、id、source、kind 完全一致，不得合并、删除或新增。
+3. 每个 translation 是该词在当前句子中的准确中文含义。冠词、助词等可说明“常不译”，但不能留空。
+4. 固定短语仍逐词输出，可在相关词的 note 中说明整体短语含义。例如 under the hood 的 hood 可注明“短语整体指底层机制”。
+5. fullTranslation 给出自然、准确、完整的整段中文译文。
+6. JSON 结构严格为 {"fullTranslation":"...","segments":[{"id":0,"source":"...","kind":"word","translation":"...","note":"可选"}]}。
+
+原文：
+${text}
+
+tokens：
+${JSON.stringify(tokens)}`;
+}
+
+function parseJsonContent(content: string): unknown {
+  const trimmed = content.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  const start = trimmed.indexOf("{");
+  const end = trimmed.lastIndexOf("}");
+  if (start < 0 || end < start) throw new Error("模型没有返回 JSON 对象");
+  return JSON.parse(trimmed.slice(start, end + 1));
+}
+
+function normalizePayload(raw: unknown, tokens: Token[]): TranslationPayload {
+  if (!raw || typeof raw !== "object") throw new Error("模型返回格式无效");
+  const candidate = raw as { fullTranslation?: unknown; segments?: unknown };
+  if (typeof candidate.fullTranslation !== "string" || !Array.isArray(candidate.segments)) {
+    throw new Error("模型返回缺少译文或逐词结果");
+  }
+
+  const byId = new Map<number, Record<string, unknown>>();
+  for (const item of candidate.segments) {
+    if (item && typeof item === "object" && typeof (item as { id?: unknown }).id === "number") {
+      byId.set((item as { id: number }).id, item as Record<string, unknown>);
+    }
+  }
+
+  const segments: Segment[] = tokens.map((token) => {
+    const translated = byId.get(token.id);
+    if (!translated || typeof translated.translation !== "string") {
+      throw new Error(`模型漏掉了词元 ${token.id}: ${token.source}`);
+    }
+    return {
+      ...token,
+      translation: translated.translation,
+      ...(typeof translated.note === "string" && translated.note
+        ? { note: translated.note }
+        : {}),
+    };
+  });
+
+  return { fullTranslation: candidate.fullTranslation, segments };
+}
+
+async function translateWithOllama(
+  text: string,
+  tokens: Token[],
+  options: TranslateOptions,
+): Promise<TranslationPayload> {
+  const baseUrl = cleanBaseUrl(options.ollamaUrl || DEFAULT_OLLAMA_URL);
+  const model = options.ollamaModel || DEFAULT_OLLAMA_MODEL;
+  const response = await fetchWithTimeout(`${baseUrl}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model,
+      stream: false,
+      format: "json",
+      options: { temperature: 0.1 },
+      messages: [{ role: "user", content: makePrompt(text, tokens) }],
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Ollama 请求失败（${response.status}）：${detail.slice(0, 180)}`);
+  }
+  const body = (await response.json()) as { message?: { content?: string } };
+  if (!body.message?.content) throw new Error("Ollama 没有返回内容");
+  return normalizePayload(parseJsonContent(body.message.content), tokens);
+}
+
+async function translateWithOpenAI(
+  text: string,
+  tokens: Token[],
+  options: TranslateOptions,
+): Promise<TranslationPayload> {
+  const apiKey = options.openaiApiKey || process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("尚未配置云端 API Key");
+
+  const baseUrl = cleanBaseUrl(options.openaiBaseUrl || DEFAULT_OPENAI_URL);
+  const model = options.openaiModel || DEFAULT_OPENAI_MODEL;
+  const isOfficialOpenAI = new URL(baseUrl).hostname.endsWith("openai.com");
+  const response = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content: makePrompt(text, tokens) }],
+      ...(isOfficialOpenAI ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`云端模型请求失败（${response.status}）：${detail.slice(0, 180)}`);
+  }
+  const body = (await response.json()) as {
+    choices?: Array<{ message?: { content?: string } }>;
+  };
+  const content = body.choices?.[0]?.message?.content;
+  if (!content) throw new Error("云端模型没有返回内容");
+  return normalizePayload(parseJsonContent(content), tokens);
+}
+
+export async function translate(
+  text: string,
+  tokens: Token[],
+  options: TranslateOptions,
+): Promise<{ payload: TranslationPayload; engine: string; warning?: string }> {
+  if (options.provider === "dictionary") {
+    return { payload: dictionaryTranslate(text, tokens), engine: "极速词典" };
+  }
+  if (options.provider === "ollama") {
+    return {
+      payload: await translateWithOllama(text, tokens, options),
+      engine: `Ollama · ${options.ollamaModel || DEFAULT_OLLAMA_MODEL}`,
+    };
+  }
+  if (options.provider === "openai") {
+    return {
+      payload: await translateWithOpenAI(text, tokens, options),
+      engine: `云端 · ${options.openaiModel || DEFAULT_OPENAI_MODEL}`,
+    };
+  }
+
+  const ollamaModels = await getOllamaModels(options.ollamaUrl || DEFAULT_OLLAMA_URL);
+  const requestedModel = options.ollamaModel || DEFAULT_OLLAMA_MODEL;
+  const localModel = ollamaModels.includes(requestedModel) ? requestedModel : ollamaModels[0];
+
+  if (localModel) {
+    return {
+      payload: await translateWithOllama(text, tokens, { ...options, ollamaModel: localModel }),
+      engine: `Ollama · ${localModel}`,
+    };
+  }
+
+  if (options.openaiApiKey || process.env.OPENAI_API_KEY) {
+    return {
+      payload: await translateWithOpenAI(text, tokens, options),
+      engine: `云端 · ${options.openaiModel || DEFAULT_OPENAI_MODEL}`,
+    };
+  }
+
+  return {
+    payload: dictionaryTranslate(text, tokens),
+    engine: "极速词典",
+    warning: "未检测到 Ollama 或云端 API Key，已使用基础词典。模型模式能提供更准确的语境翻译。",
+  };
+}

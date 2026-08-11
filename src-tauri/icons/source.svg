@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="220" fill="#136b4b"/>
+  <rect x="176" y="176" width="672" height="672" rx="128" fill="#ffffff"/>
+  <path d="M512 264v496" stroke="#d8e8df" stroke-width="22"/>
+  <text x="344" y="615" fill="#163f30" font-family="-apple-system, BlinkMacSystemFont, Arial, sans-serif" font-size="310" font-weight="700" text-anchor="middle">A</text>
+  <text x="680" y="603" fill="#163f30" font-family="PingFang SC, Hiragino Sans GB, sans-serif" font-size="264" font-weight="700" text-anchor="middle">译</text>
+</svg>

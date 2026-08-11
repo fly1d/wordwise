@@ -1,0 +1,40 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "逐词",
+  "version": "0.1.0-beta.1",
+  "identifier": "com.wordwise.translator",
+  "build": {
+    "beforeDevCommand": "npm run dev:web",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "逐词 · 英语精读翻译",
+        "width": 1180,
+        "height": 780,
+        "minWidth": 390,
+        "minHeight": 620,
+        "center": true,
+        "resizable": true
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:* https:; img-src 'self' asset: http://asset.localhost data: blob:; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "category": "Productivity",
+    "shortDescription": "选中文字，查看逐词中文翻译",
+    "longDescription": "本地优先的英语逐词翻译工具，支持 macOS 全局快捷键、本地模型、云端模型和文档导入。",
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "infoPlist": "Info.plist"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.env
+.env.local
+.DS_Store
+npm-debug.log*
+src-tauri/target/
+src-tauri/gen/schemas/
+playwright-report/
+test-results/

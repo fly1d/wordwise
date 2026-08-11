@@ -1,0 +1,57 @@
+{
+  "name": "word-by-word-translator",
+  "private": true,
+  "version": "0.1.0-beta.1",
+  "description": "Local-first word-by-word English to Chinese translator for macOS and the web",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c yellow,cyan \"tsx watch server/index.ts\" \"vite --host 0.0.0.0\"",
+    "dev:web": "vite --host 0.0.0.0",
+    "build": "tsc -b && vite build",
+    "start": "NODE_ENV=production tsx server/index.ts",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:unit": "vitest run server/tokenize.test.ts",
+    "test:api": "vitest run server/app.test.ts",
+    "test:smoke": "playwright test",
+    "check": "npm run typecheck && npm test && npm run build",
+    "desktop:check": "cargo fmt --manifest-path src-tauri/Cargo.toml -- --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets -- -D warnings && cargo check --manifest-path src-tauri/Cargo.toml",
+    "desktop:build:app": "tauri build --bundles app",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/plugin-global-shortcut": "^2.3.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "lucide-react": "^0.468.0",
+    "mammoth": "^1.9.0",
+    "multer": "^1.4.5-lts.2",
+    "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^6.2.108",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@tauri-apps/cli": "^2.11.4",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.3",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^24.2.1",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "concurrently": "^9.2.0",
+    "tsx": "^4.20.3",
+    "typescript": "~5.8.3",
+    "vite": "^7.1.1",
+    "vitest": "^3.2.4",
+    "supertest": "^7.1.4",
+    "@types/supertest": "^6.0.3"
+  }
+}
