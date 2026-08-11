@@ -38,5 +38,13 @@ jobs:
             ]
             | length
           ' "$SARIF_DIR"/*.sarif)"
-          echo "CodeQL warning/error findings: $findings" >> "$GITHUB_STEP_SUMMARY"
+          echo "CodeQL warning/error findings: $findings" | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ "$findings" -ne 0 ]; then
+            jq -rs '
+              .[]
+              | .runs[]?.results[]?
+              | select((.level // "warning") == "error" or (.level // "warning") == "warning")
+              | "\(.level // "warning") \(.ruleId // "unknown-rule") \(.locations[0].physicalLocation.artifactLocation.uri // "unknown-file"): \(.message.text // "No message")"
+            ' "$SARIF_DIR"/*.sarif
+          fi
           test "$findings" -eq 0
