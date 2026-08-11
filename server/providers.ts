@@ -22,6 +22,11 @@ function cleanBaseUrl(url: string) {
   return url.replace(/\/+$/, "");
 }
 
+export function isOfficialOpenAIUrl(value: string) {
+  const hostname = new URL(value).hostname.toLowerCase();
+  return hostname === "openai.com" || hostname.endsWith(".openai.com");
+}
+
 async function fetchWithTimeout(url: string, init?: RequestInit, timeoutMs = 60_000) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -138,7 +143,7 @@ async function translateWithOpenAI(
 
   const baseUrl = cleanBaseUrl(options.openaiBaseUrl || DEFAULT_OPENAI_URL);
   const model = options.openaiModel || DEFAULT_OPENAI_MODEL;
-  const isOfficialOpenAI = new URL(baseUrl).hostname.endsWith("openai.com");
+  const isOfficialOpenAI = isOfficialOpenAIUrl(baseUrl);
   const response = await fetchWithTimeout(`${baseUrl}/chat/completions`, {
     method: "POST",
     headers: {

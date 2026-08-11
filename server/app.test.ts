@@ -45,4 +45,19 @@ describe("translation API", () => {
       charCount: 30,
     });
   });
+
+  it("rate-limits document extraction", async () => {
+    const limitedApp = createApp({ serveStatic: false, documentRequestLimit: 1 });
+    await request(limitedApp)
+      .post("/api/documents/extract")
+      .attach("file", Buffer.from("First document."), "first.txt")
+      .expect(200);
+
+    const response = await request(limitedApp)
+      .post("/api/documents/extract")
+      .attach("file", Buffer.from("Second document."), "second.txt")
+      .expect(429);
+
+    expect(response.body.error).toContain("过于频繁");
+  });
 });
