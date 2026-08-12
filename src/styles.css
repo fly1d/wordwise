@@ -48,7 +48,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 }
 
 .brand, .topbar-actions, .language-pair, .engine-select, .pane-actions, .text-button,
-.primary-button, .file-chip, .settings-group-title, .dialog-footer {
+.primary-button, .secondary-button, .file-chip, .settings-group-title, .dialog-footer {
   display: flex;
   align-items: center;
 }
@@ -114,6 +114,39 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 
 .language-pair { gap: 12px; font-size: 13px; font-weight: 650; }
 .language-pair svg { color: #8e9791; }
+
+.setup-banner {
+  min-height: 64px;
+  margin-bottom: 12px;
+  padding: 11px 12px 11px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid #e4c38e;
+  border-radius: 7px;
+  background: var(--amber-soft);
+  color: #71410f;
+}
+.setup-banner div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.setup-banner strong { font-size: 12px; }
+.setup-banner span { color: #7b603f; font-size: 10px; line-height: 1.45; }
+
+.secondary-button {
+  min-height: 36px;
+  flex: 0 0 auto;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid #b97c31;
+  border-radius: 7px;
+  background: #fffaf1;
+  color: #754511;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.secondary-button:hover { background: #fff; }
 
 .engine-select {
   position: relative;
@@ -388,6 +421,7 @@ textarea::placeholder { color: #a1a8a3; }
   .topbar { height: 56px; }
   .workspace { padding-top: 8px; }
   .language-bar { min-height: 46px; }
+  .setup-banner { align-items: flex-start; flex-direction: column; gap: 10px; }
   .translator { border-radius: 6px; }
   .pane-heading { padding: 0 14px; }
   .text-button { font-size: 0; }
