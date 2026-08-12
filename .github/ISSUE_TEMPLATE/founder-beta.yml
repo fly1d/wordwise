@@ -1,0 +1,65 @@
+name: Founder Beta application
+description: Apply for one of the first 15 macOS testing places
+title: "[Founder Beta]: "
+labels: ["founder-beta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢申请逐词 Founder Beta。这个申请是公开 Issue，请不要粘贴你阅读的原文、文档、API Key、邮箱或其他个人信息。我们会直接通过 GitHub Issue 联系你。
+  - type: dropdown
+    id: macos
+    attributes:
+      label: macOS version
+      description: 当前主要支持 macOS 12 及以上版本。
+      options:
+        - macOS 26
+        - macOS 15
+        - macOS 14
+        - macOS 13
+        - macOS 12
+        - Other / not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: 阅读英文技术资料的频率
+      options:
+        - 几乎每天
+        - 每周 3 至 5 天
+        - 每周 1 至 2 天
+        - 少于每周 1 天
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: 当前工作流
+      description: 你现在用什么工具理解英文技术资料？最费时间的一步是什么？不要附上真实原文。
+      placeholder: 例如：阅读 API 文档时用浏览器整页翻译，但很难确认术语和固定短语为什么这样翻译。
+    validations:
+      required: true
+  - type: dropdown
+    id: engine
+    attributes:
+      label: 可以使用的翻译引擎
+      description: Beta 不包含模型费用。
+      options:
+        - Ollama 本地模型
+        - 自己的 OpenAI 兼容 API Key
+        - 两者都可以
+        - 目前都没有，需要配置帮助
+    validations:
+      required: true
+  - type: checkboxes
+    id: commitment
+    attributes:
+      label: 测试约定
+      options:
+        - label: 我愿意在 7 天内至少使用 3 天，并反馈是否继续使用。
+          required: true
+        - label: 我理解首周免费；第 7 天仍觉得有用时，Founder Beta 的一次性价格是 CNY 39。
+          required: true
+        - label: 我不会在公开 Issue 中提交原文、文档、API Key 或其他私密内容。
+          required: true

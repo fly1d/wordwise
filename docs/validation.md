@@ -7,6 +7,7 @@ Do not treat downloads, compliments, or GitHub stars as proof that the product s
 ## Fourteen-day test
 
 1. Recruit 15 macOS users who read English technical material at least three times per week.
+   Direct candidates to the public product page at `https://fly1d.github.io/wordwise/`. Applications use the Founder Beta GitHub Issue form so no separate customer database is required.
 2. Watch the first five users install and complete one selection translation. Do not coach them unless they are blocked.
 3. Give each user the same seven-day build and support channel.
 4. On day seven, offer a founder build for a one-time CNY 39 payment. It includes the signed build when available, updates through the beta, and direct support. Model usage remains BYOK or local.
