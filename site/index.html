@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="逐词 Wordwise 是面向中文开发者的 macOS 英语精读工具：选中文字，获得整段译文和不漏词的语境逐词解释。" />
+    <meta property="og:title" content="逐词 Wordwise | 技术英文逐词精读" />
+    <meta property="og:description" content="选中文字，按下快捷键，查看整段译文和逐词语境解释。首批 macOS Beta 开放申请。" />
+    <meta property="og:image" content="https://fly1d.github.io/wordwise/assets/wordwise-app.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://fly1d.github.io/wordwise/" />
+    <meta name="theme-color" content="#0f6b4c" />
+    <title>逐词 Wordwise | 技术英文逐词精读</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="逐词 Wordwise 首页">
+        <span class="brand-mark" aria-hidden="true">逐</span>
+        <span>逐词 <small>Wordwise</small></span>
+      </a>
+      <nav aria-label="主导航">
+        <a href="#difference">为什么是逐词</a>
+        <a href="#founder">首批测试</a>
+        <a href="https://github.com/fly1d/wordwise">GitHub</a>
+      </nav>
+      <a class="nav-cta" href="https://github.com/fly1d/wordwise/issues/new?template=founder-beta.yml">申请 Beta</a>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <img src="./assets/wordwise-app.png" alt="逐词应用的翻译结果界面示例" />
+        <div class="hero-copy">
+          <p class="availability"><span></span>15 个 Founder Beta 名额开放登记</p>
+          <h1 id="hero-title">逐词 Wordwise</h1>
+          <p class="hero-line">读技术英文，不只得到一句中文。</p>
+          <p class="hero-detail">在 macOS 里选中文字，按下 <kbd>⌥ T</kbd>，同时查看完整译文与逐词语境解释。固定短语、冠词和标点都保持对齐。</p>
+          <div class="hero-actions">
+            <a class="primary-action" href="https://github.com/fly1d/wordwise/issues/new?template=founder-beta.yml">申请首批测试</a>
+            <a class="secondary-action" href="https://github.com/fly1d/wordwise">查看开源代码</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="trust-strip" aria-label="产品原则">
+        <span><b>macOS</b> 原生划词流程</span>
+        <span><b>Local-first</b> 支持 Ollama 本地模型</span>
+        <span><b>BYOK</b> 云端模式使用你的 API</span>
+        <span><b>MIT</b> 核心代码公开</span>
+      </section>
+
+      <section class="difference" id="difference">
+        <div class="section-heading">
+          <p>聚焦一个高频问题</p>
+          <h2>翻译整句很容易，弄懂每个词为什么这样译并不容易。</h2>
+        </div>
+        <div class="comparison">
+          <article>
+            <span class="number">01</span>
+            <h3>逐词但不脱离语境</h3>
+            <p><i>hood</i> 不只显示“引擎盖”，在 <i>under the hood</i> 中会说明它指底层机制。</p>
+          </article>
+          <article>
+            <span class="number">02</span>
+            <h3>原文和结果一一对齐</h3>
+            <p>模型不能随意漏词、合并或改写词元。你可以从译文回到原句，而不是只拿走结论。</p>
+          </article>
+          <article>
+            <span class="number">03</span>
+            <h3>从正在阅读的地方开始</h3>
+            <p>不必反复复制、切换网页、粘贴。选中当前应用里的英文，用快捷键打开结果。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="founder" id="founder">
+        <div class="founder-offer">
+          <p class="offer-label">Founder Beta</p>
+          <h2>先用七天，再决定要不要付。</h2>
+          <p>我们正在邀请 15 位每周至少阅读三次英文技术资料的 macOS 用户。首周免费；第 7 天仍然觉得它有用，再决定是否一次性支付 <strong>¥39</strong>。</p>
+          <ul>
+            <li>适合开发者、研究者和技术内容创作者</li>
+            <li>本地模型免费；云端模型使用你自己的 API Key</li>
+            <li>Beta 更新与直接问题支持包含在 Founder 版本内</li>
+          </ul>
+          <a class="primary-action dark" href="https://github.com/fly1d/wordwise/issues/new?template=founder-beta.yml">登记一个测试名额</a>
+          <small>签名版准备完成后按登记顺序邀请。登记不要求付款，也不保证录取。</small>
+        </div>
+        <aside class="privacy-note">
+          <span>隐私边界</span>
+          <h3>我们不需要看到你翻译了什么。</h3>
+          <p>申请和使用统计不会收集选中文字、文档、API Key 或完整模型请求。本地模型内容留在电脑；云端模式只发送给你选择的模型服务。</p>
+          <a href="https://github.com/fly1d/wordwise/blob/main/docs/validation.md">查看公开验证规则</a>
+        </aside>
+      </section>
+
+      <section class="closing">
+        <p>不是问“你觉得这个想法好吗”。</p>
+        <h2>拿真实的英文材料来用，然后用行动回答。</h2>
+        <a class="primary-action" href="https://github.com/fly1d/wordwise/issues/new?template=founder-beta.yml">申请 Founder Beta</a>
+      </section>
+    </main>
+
+    <footer>
+      <span>逐词 Wordwise · 2026</span>
+      <div>
+        <a href="https://github.com/fly1d/wordwise">Source</a>
+        <a href="https://github.com/fly1d/wordwise/blob/main/LICENSE">MIT License</a>
+        <a href="https://github.com/fly1d/wordwise/security">Security</a>
+      </div>
+    </footer>
+  </body>
+</html>

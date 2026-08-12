@@ -7,6 +7,8 @@
 
 本地优先的英中逐词翻译工具，提供 macOS 桌面客户端和 Web 界面。文本先被确定性拆成词元，再交给翻译引擎；模型返回会被校验，不能随意漏词或合并词语。
 
+产品介绍与 Founder Beta 申请：[fly1d.github.io/wordwise](https://fly1d.github.io/wordwise/)
+
 ## 功能
 
 - macOS 中选中文字后按 `⌥ + T`，打开客户端并立即翻译
@@ -74,6 +76,7 @@ Web 服务只会请求上述服务端环境变量配置的模型地址，页面�
 ```bash
 npm run check
 npm run test:smoke
+npm run test:site
 npm run desktop:check
 ```
 
