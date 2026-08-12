@@ -18,6 +18,11 @@ export const providerDefaults = {
   openaiModel: DEFAULT_OPENAI_MODEL,
 };
 
+export function configuredApiKey(value: string | undefined) {
+  const key = value?.trim();
+  return key || undefined;
+}
+
 function parseBaseUrl(value: string) {
   let url: URL;
   try {
@@ -173,7 +178,7 @@ async function translateWithOpenAI(
   tokens: Token[],
   options: TranslateOptions,
 ): Promise<TranslationPayload> {
-  const apiKey = options.openaiApiKey || process.env.OPENAI_API_KEY;
+  const apiKey = configuredApiKey(options.openaiApiKey) ?? configuredApiKey(process.env.OPENAI_API_KEY);
   if (!apiKey) throw new Error("尚未配置云端 API Key");
 
   const baseUrl = configuredBaseUrl(options.openaiBaseUrl, DEFAULT_OPENAI_URL, "云端模型");
@@ -236,16 +241,14 @@ export async function translate(
     };
   }
 
-  if (options.openaiApiKey || process.env.OPENAI_API_KEY) {
+  if (configuredApiKey(options.openaiApiKey) || configuredApiKey(process.env.OPENAI_API_KEY)) {
     return {
       payload: await translateWithOpenAI(text, tokens, options),
       engine: `云端 · ${options.openaiModel || DEFAULT_OPENAI_MODEL}`,
     };
   }
 
-  return {
-    payload: dictionaryTranslate(text, tokens),
-    engine: "极速词典",
-    warning: "未检测到 Ollama 或云端 API Key，已使用基础词典。模型模式能提供更准确的语境翻译。",
-  };
+  throw new Error(
+    "尚未配置语境翻译引擎。请连接 Ollama 或填写云端 API Key；只需逐词查义时，可明确选择极速词典。",
+  );
 }

@@ -78,8 +78,42 @@ pub struct ProviderDefaults {
     openai_model: String,
 }
 
+#[derive(Debug, PartialEq)]
+enum AutoEngine {
+    Ollama(String),
+    OpenAi,
+}
+
+fn select_auto_engine(
+    models: &[String],
+    requested_model: &str,
+    has_api_key: bool,
+) -> Result<AutoEngine, String> {
+    if let Some(model) = models
+        .iter()
+        .find(|model| model.as_str() == requested_model)
+        .or(models.first())
+    {
+        return Ok(AutoEngine::Ollama(model.clone()));
+    }
+    if has_api_key {
+        return Ok(AutoEngine::OpenAi);
+    }
+    Err(
+        "尚未配置语境翻译引擎。请连接 Ollama 或填写云端 API Key；只需逐词查义时，可明确选择极速词典。"
+            .into(),
+    )
+}
+
 fn env_or(name: &str, fallback: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| fallback.to_owned())
+}
+
+fn configured_api_key(value: Option<String>) -> Option<String> {
+    value.and_then(|key| {
+        let key = key.trim();
+        (!key.is_empty()).then(|| key.to_owned())
+    })
 }
 
 fn endpoint_url(base_url: &str, endpoint: &str) -> Result<Url, String> {
@@ -231,15 +265,9 @@ fn punctuation(value: &str) -> &str {
     }
 }
 
-fn dictionary_translate(text: &str, tokens: &[Token]) -> (String, Vec<Segment>) {
-    let full_translation = if text
-        .trim_start()
-        .starts_with("We suggest that developers start")
-    {
-        "我们建议开发者先直接使用大语言模型 API：许多模式只需几行代码就能实现。如果确实使用框架，请确保理解其底层代码。对内部机制的错误假设是客户出错的常见根源。"
-    } else {
-        "基础词典模式只提供逐词释义；切换到本地模型或云端模型可获得通顺的整句翻译。"
-    };
+fn dictionary_translate(_text: &str, tokens: &[Token]) -> (String, Vec<Segment>) {
+    let full_translation =
+        "极速词典只提供逐词查义。连接本地模型或云端 API 后，才能获得可靠的整句语境翻译。";
 
     let segments = tokens
         .iter()
@@ -412,7 +440,7 @@ pub async fn desktop_status() -> DesktopStatus {
             available: !models.is_empty(),
             models,
         },
-        openai_configured: std::env::var("OPENAI_API_KEY").is_ok(),
+        openai_configured: configured_api_key(std::env::var("OPENAI_API_KEY").ok()).is_some(),
         custom_endpoints_allowed: true,
         defaults: ProviderDefaults {
             ollama_url,
@@ -453,8 +481,8 @@ pub async fn desktop_translate(request: TranslationRequest) -> Result<Translatio
         .unwrap_or_else(|| env_or("OPENAI_MODEL", DEFAULT_OPENAI_MODEL));
     let api_key = settings
         .openai_api_key
-        .filter(|key| !key.is_empty())
-        .or_else(|| std::env::var("OPENAI_API_KEY").ok());
+        .and_then(|key| configured_api_key(Some(key)))
+        .or_else(|| configured_api_key(std::env::var("OPENAI_API_KEY").ok()));
 
     let (full_translation, segments, engine, warning) = match settings.provider.as_str() {
         "dictionary" => {
@@ -474,25 +502,18 @@ pub async fn desktop_translate(request: TranslationRequest) -> Result<Translatio
         }
         _ => {
             let models = ollama_models(&ollama_url).await;
-            if let Some(model) = models
-                .iter()
-                .find(|model| *model == &ollama_model)
-                .or(models.first())
-            {
-                let (full, segments) = ollama_translate(text, &tokens, &ollama_url, model).await?;
-                (full, segments, format!("Ollama · {model}"), None)
-            } else if let Some(key) = api_key.as_deref() {
-                let (full, segments) =
-                    openai_translate(text, &tokens, &openai_url, &openai_model, key).await?;
-                (full, segments, format!("云端 · {openai_model}"), None)
-            } else {
-                let (full, segments) = dictionary_translate(text, &tokens);
-                (
-                    full,
-                    segments,
-                    "极速词典".to_owned(),
-                    Some("未检测到 Ollama 或云端 API Key，已使用基础词典。模型模式能提供更准确的语境翻译。".to_owned()),
-                )
+            match select_auto_engine(&models, &ollama_model, api_key.is_some())? {
+                AutoEngine::Ollama(model) => {
+                    let (full, segments) =
+                        ollama_translate(text, &tokens, &ollama_url, &model).await?;
+                    (full, segments, format!("Ollama · {model}"), None)
+                }
+                AutoEngine::OpenAi => {
+                    let key = api_key.as_deref().expect("auto engine requires an API key");
+                    let (full, segments) =
+                        openai_translate(text, &tokens, &openai_url, &openai_model, key).await?;
+                    (full, segments, format!("云端 · {openai_model}"), None)
+                }
             }
         }
     };
@@ -508,7 +529,9 @@ pub async fn desktop_translate(request: TranslationRequest) -> Result<Translatio
 
 #[cfg(test)]
 mod tests {
-    use super::{endpoint_url, is_official_openai_url};
+    use super::{
+        configured_api_key, endpoint_url, is_official_openai_url, select_auto_engine, AutoEngine,
+    };
 
     #[test]
     fn appends_api_paths_without_string_concatenation() {
@@ -523,5 +546,30 @@ mod tests {
             endpoint_url("https://api.openai.com.example.test/v1", "chat/completions").unwrap();
         assert!(is_official_openai_url(&official));
         assert!(!is_official_openai_url(&spoofed));
+    }
+
+    #[test]
+    fn automatic_mode_requires_a_context_engine() {
+        let error = select_auto_engine(&[], "qwen3:4b", false).unwrap_err();
+        assert!(error.contains("尚未配置语境翻译引擎"));
+
+        assert_eq!(
+            select_auto_engine(&[], "qwen3:4b", true).unwrap(),
+            AutoEngine::OpenAi
+        );
+        assert_eq!(
+            select_auto_engine(&["qwen3:4b".into()], "qwen3:4b", false).unwrap(),
+            AutoEngine::Ollama("qwen3:4b".into())
+        );
+    }
+
+    #[test]
+    fn empty_api_keys_are_not_configured() {
+        assert_eq!(configured_api_key(None), None);
+        assert_eq!(configured_api_key(Some("   ".into())), None);
+        assert_eq!(
+            configured_api_key(Some("  sk-test  ".into())),
+            Some("sk-test".into())
+        );
     }
 }

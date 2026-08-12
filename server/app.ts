@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { documentUploadLimits, extractDocumentText } from "./documents.js";
-import { getOllamaModels, providerDefaults, translate } from "./providers.js";
+import { configuredApiKey, getOllamaModels, providerDefaults, translate } from "./providers.js";
 import { tokenize } from "./tokenize.js";
 import type { Provider, TranslateOptions } from "./types.js";
 
@@ -28,7 +28,7 @@ export function createApp(options: { serveStatic?: boolean; documentRequestLimit
     const models = await getOllamaModels();
     response.json({
       ollama: { available: models.length > 0, models },
-      openaiConfigured: Boolean(process.env.OPENAI_API_KEY),
+      openaiConfigured: Boolean(configuredApiKey(process.env.OPENAI_API_KEY)),
       customEndpointsAllowed: false,
       defaults: providerDefaults,
     });

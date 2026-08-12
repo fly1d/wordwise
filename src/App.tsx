@@ -172,6 +172,10 @@ export default function App() {
 
   async function handleTranslate() {
     if (loading) return;
+    if (needsModelSetup) {
+      setSettingsOpen(true);
+      return;
+    }
     await translateValue(text);
   }
 
@@ -217,16 +221,24 @@ export default function App() {
     setError("");
   }
 
+  const hasEnteredApiKey = Boolean(settings.openaiApiKey.trim());
+
   const currentProviderStatus = (() => {
-    if (settings.provider === "dictionary") return "离线可用";
+    if (settings.provider === "dictionary") return "仅逐词查义";
     if (settings.provider === "ollama") return status?.ollama.available ? "本地已连接" : "等待本地模型";
     if (settings.provider === "openai") {
-      return settings.openaiApiKey || status?.openaiConfigured ? "API 已配置" : "需要 API Key";
+      return hasEnteredApiKey || status?.openaiConfigured ? "API 已配置" : "需要 API Key";
     }
     if (status?.ollama.available) return "将使用本地模型";
-    if (settings.openaiApiKey || status?.openaiConfigured) return "将使用云端模型";
-    return "将使用基础词典";
+    if (hasEnteredApiKey || status?.openaiConfigured) return "将使用云端模型";
+    return "需要配置引擎";
   })();
+
+  const needsModelSetup = status !== null
+    && settings.provider === "auto"
+    && !status.ollama.available
+    && !hasEnteredApiKey
+    && !status.openaiConfigured;
 
   return (
     <div className="app-shell">
@@ -265,6 +277,18 @@ export default function App() {
             <ChevronDown size={14} />
           </label>
         </div>
+
+        {needsModelSetup && (
+          <div className="setup-banner" role="status">
+            <div>
+              <strong>先连接一个语境翻译引擎</strong>
+              <span>Ollama 内容留在本机；云端 API 适合立即开始。极速词典只做逐词查义，不会冒充整句翻译。</span>
+            </div>
+            <button className="secondary-button" type="button" onClick={() => setSettingsOpen(true)}>
+              <Settings size={16} />配置引擎
+            </button>
+          </div>
+        )}
 
         <section className={`translator ${dragging ? "is-dragging" : ""}`}>
           <div
@@ -343,7 +367,7 @@ export default function App() {
                 onClick={() => void handleTranslate()}
               >
                 {loading ? <LoaderCircle className="spin" size={17} /> : <Languages size={17} />}
-                {loading ? "翻译中" : "逐词翻译"}
+                {loading ? "翻译中" : needsModelSetup ? "配置后翻译" : "逐词翻译"}
               </button>
             </div>
           </div>
@@ -385,7 +409,7 @@ export default function App() {
             {result && !loading && (
               <div className="results">
                 <div className="full-translation">
-                  <span>整段翻译</span>
+                  <span>{result.engine === "极速词典" ? "模式说明" : "整段翻译"}</span>
                   <p>{result.fullTranslation}</p>
                 </div>
                 {result.warning && <div className="warning-message">{result.warning}</div>}
@@ -421,7 +445,7 @@ export default function App() {
             <div className="dialog-heading">
               <div>
                 <h2 id="settings-title">翻译引擎</h2>
-                <p>自动模式依次使用 Ollama、云端 API、基础词典。</p>
+                <p>自动模式使用已配置的 Ollama 或云端 API，不会静默降级为基础词典。</p>
               </div>
               <button className="icon-button" type="button" title="关闭设置" onClick={() => setSettingsOpen(false)}><X size={18} /></button>
             </div>
@@ -471,7 +495,7 @@ export default function App() {
               <div className="settings-group">
                 <div className="settings-group-title">
                   <span>OpenAI 兼容 API</span>
-                  <b className={settings.openaiApiKey || status?.openaiConfigured ? "online" : ""}>{settings.openaiApiKey || status?.openaiConfigured ? "已配置" : "未配置"}</b>
+                  <b className={hasEnteredApiKey || status?.openaiConfigured ? "online" : ""}>{hasEnteredApiKey || status?.openaiConfigured ? "已配置" : "未配置"}</b>
                 </div>
                 <label>
                   <span>API 地址</span>
@@ -508,6 +532,6 @@ function providerDescription(provider: Provider, status: ServerStatus | null) {
     case "auto": return "按可用性选择最佳引擎";
     case "ollama": return status?.ollama.available ? `${status.ollama.models.length} 个本地模型可用` : "数据不离开本机";
     case "openai": return "语境质量高，按 API 用量计费";
-    case "dictionary": return "毫秒级响应，生词覆盖有限";
+    case "dictionary": return "离线逐词查义，不提供可靠整句翻译";
   }
 }

@@ -46,10 +46,10 @@ npm run desktop:build:app
 
 ## 翻译引擎
 
-- `自动选择`：依次尝试 Ollama、本机环境变量中的云端 API、基础词典。
+- `自动选择`：优先使用可用的 Ollama；未检测到本地模型时使用已配置的云端 API。两者都不可用时会提示配置，不会把基础词典冒充成语境翻译。
 - `Ollama 本地`：内容不离开电脑，建议使用 `qwen3:4b` 或更大的 Qwen 模型。
 - `云端模型`：支持 OpenAI 及兼容 `/chat/completions` 的 API。
-- `极速词典`：完全离线、即时返回，生词和语境覆盖有限。
+- `极速词典`：完全离线、即时返回，只用于逐词查义，不提供可靠的整句语境翻译。
 
 本地模型示例：
 
@@ -77,7 +77,7 @@ npm run test:smoke
 npm run desktop:check
 ```
 
-所有修改通过 GitHub pull request 合并。风险分级、测试范围和发布步骤见 [CONTRIBUTING.md](CONTRIBUTING.md)、[docs/testing.md](docs/testing.md) 和 [docs/releasing.md](docs/releasing.md)。
+所有修改通过 GitHub pull request 合并。风险分级、测试范围和发布步骤见 [CONTRIBUTING.md](CONTRIBUTING.md)、[docs/testing.md](docs/testing.md) 和 [docs/releasing.md](docs/releasing.md)。首批用户与付费验证按 [docs/validation.md](docs/validation.md) 执行，不以下载量或口头好评替代付款证据。
 
 安全问题请按 [SECURITY.md](SECURITY.md) 使用 GitHub 私密漏洞报告，不要提交包含密钥、私有选区或文档内容的公开 Issue。
 

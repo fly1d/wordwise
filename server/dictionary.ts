@@ -92,14 +92,9 @@ function translateToken(token: Token): Segment {
   };
 }
 
-export function dictionaryTranslate(text: string, tokens: Token[]): TranslationPayload {
-  const normalized = text.replace(/\s+/g, " ").trim();
-  const sampleTranslation = normalized.startsWith("We suggest that developers start")
-    ? "我们建议开发者先直接使用大语言模型 API：许多模式只需几行代码就能实现。如果确实使用框架，请确保理解其底层代码。对内部机制的错误假设是客户出错的常见根源。"
-    : "基础词典模式只提供逐词释义；切换到本地模型或云端模型可获得通顺的整句翻译。";
-
+export function dictionaryTranslate(_text: string, tokens: Token[]): TranslationPayload {
   return {
-    fullTranslation: sampleTranslation,
+    fullTranslation: "极速词典只提供逐词查义。连接本地模型或云端 API 后，才能获得可靠的整句语境翻译。",
     segments: tokens.map(translateToken),
   };
 }
