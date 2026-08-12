@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0-beta.1",
   "description": "Local-first word-by-word English to Chinese translator for macOS and the web",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=24"

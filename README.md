@@ -3,6 +3,7 @@
 [![CI](https://github.com/fly1d/wordwise/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/fly1d/wordwise/actions/workflows/ci.yml)
 [![Desktop](https://github.com/fly1d/wordwise/actions/workflows/desktop.yml/badge.svg?branch=main)](https://github.com/fly1d/wordwise/actions/workflows/desktop.yml)
 [![CodeQL](https://github.com/fly1d/wordwise/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/fly1d/wordwise/actions/workflows/codeql.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 本地优先的英中逐词翻译工具，提供 macOS 桌面客户端和 Web 界面。文本先被确定性拆成词元，再交给翻译引擎；模型返回会被校验，不能随意漏词或合并词语。
 
@@ -84,4 +85,7 @@ npm run desktop:check
 
 - 全局划词 beta 目前只支持 macOS。
 - 文档功能提取文字后翻译，尚未保持原文档版式导出。
-- 仓库公开可见，但暂未授予开源许可证；除非另行说明，项目保留全部权利。
+
+## 许可证
+
+本项目采用 [MIT License](LICENSE)。
