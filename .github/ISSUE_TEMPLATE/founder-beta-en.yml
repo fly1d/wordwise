@@ -1,0 +1,65 @@
+name: Founder Beta application (English)
+description: Apply for one of the first 15 macOS beta spots
+title: "[Founder Beta]: "
+labels: ["founder-beta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for applying to the Wordwise Founder Beta. This application is a public issue. Do not paste source text, documents, API keys, email addresses, or other private information. We will contact you through this GitHub issue.
+  - type: dropdown
+    id: macos
+    attributes:
+      label: macOS version
+      description: The current beta targets macOS 12 and later.
+      options:
+        - macOS 26
+        - macOS 15
+        - macOS 14
+        - macOS 13
+        - macOS 12
+        - Other / not sure
+    validations:
+      required: true
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: How often do you read technical English?
+      options:
+        - Almost every day
+        - 3 to 5 days a week
+        - 1 to 2 days a week
+        - Less than once a week
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Current workflow
+      description: What do you use to understand technical English today, and which step costs the most time? Do not include real source text.
+      placeholder: For example, I translate full API documentation pages but cannot tell why terms and fixed phrases were translated that way.
+    validations:
+      required: true
+  - type: dropdown
+    id: engine
+    attributes:
+      label: Translation engine available to you
+      description: The beta does not include model usage fees.
+      options:
+        - Local Ollama model
+        - My own OpenAI-compatible API key
+        - Either one
+        - Neither yet; I need setup help
+    validations:
+      required: true
+  - type: checkboxes
+    id: commitment
+    attributes:
+      label: Testing agreement
+      options:
+        - label: I will use Wordwise on at least 3 of the first 7 days and report whether I would keep using it.
+          required: true
+        - label: I understand that week one is free and the optional one-time Founder price on day seven is CNY 39.
+          required: true
+        - label: I will not submit source text, documents, API keys, or other private content in a public issue.
+          required: true
