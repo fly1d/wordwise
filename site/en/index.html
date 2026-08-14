@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Wordwise is a local-first macOS reading tool that turns selected technical English into a full Chinese translation and context-aware word-by-word explanations." />
+    <meta property="og:title" content="Wordwise | Context-aware word-by-word translation" />
+    <meta property="og:description" content="Select technical English on macOS and inspect both the full Chinese translation and every word in context. Founder Beta applications are open." />
+    <meta property="og:image" content="https://fly1d.github.io/wordwise/assets/wordwise-app.png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://fly1d.github.io/wordwise/en/" />
+    <meta name="theme-color" content="#0f6b4c" />
+    <title>Wordwise | Context-aware word-by-word translation</title>
+    <link rel="canonical" href="https://fly1d.github.io/wordwise/en/" />
+    <link rel="alternate" hreflang="zh-CN" href="https://fly1d.github.io/wordwise/" />
+    <link rel="alternate" hreflang="en" href="https://fly1d.github.io/wordwise/en/" />
+    <link rel="alternate" hreflang="x-default" href="https://fly1d.github.io/wordwise/en/" />
+    <link rel="stylesheet" href="../styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Wordwise home">
+        <span class="brand-mark" aria-hidden="true">W</span>
+        <span>Wordwise</span>
+      </a>
+      <nav aria-label="Main navigation">
+        <a href="#difference">Why word by word</a>
+        <a href="#founder">Founder Beta</a>
+        <a href="https://github.com/fly1d/wordwise">GitHub</a>
+      </nav>
+      <a class="language-link" href="../" lang="zh-CN" hreflang="zh-CN">中文</a>
+      <a class="nav-cta" href="https://github.com/fly1d/wordwise/issues/new?template=founder-beta-en.yml">Apply</a>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <img src="../assets/wordwise-app.png" alt="Example of the Wordwise translation results interface" />
+        <div class="hero-copy">
+          <p class="availability"><span></span>15 Founder Beta spots open</p>
+          <h1 id="hero-title">Wordwise</h1>
+          <p class="hero-line">Read technical English without losing the words.</p>
+          <p class="hero-detail">Select text in any macOS app and press <kbd>⌥ T</kbd> to see a full Chinese translation and context-aware explanations for every word, number, and punctuation mark.</p>
+          <div class="hero-actions">
+            <a class="primary-action" href="https://github.com/fly1d/wordwise/issues/new?template=founder-beta-en.yml">Apply for Founder Beta</a>
+            <a class="secondary-action" href="https://github.com/fly1d/wordwise">View the source</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="trust-strip" aria-label="Product principles">
+        <span><b>macOS</b> system-wide selection</span>
+        <span><b>Local-first</b> Ollama support</span>
+        <span><b>BYOK</b> for cloud models</span>
+        <span><b>MIT</b> open-source core</span>
+      </section>
+
+      <section class="source-trial" id="source">
+        <div>
+          <p class="source-label">Available today</p>
+          <h2>Build the current beta from source.</h2>
+        </div>
+        <div>
+          <p>The signed and notarized installer is not ready yet. Developers with Node.js 24, Rust, and Xcode Command Line Tools can run the current macOS beta locally and inspect every line under the MIT license.</p>
+          <a class="secondary-action" href="https://github.com/fly1d/wordwise/blob/main/docs/building-en.md">View build instructions</a>
+        </div>
+      </section>
+
+      <section class="difference" id="difference">
+        <div class="section-heading">
+          <p>One frequent reading problem</p>
+          <h2>A sentence translation is easy. Understanding why each word was translated that way is not.</h2>
+        </div>
+        <div class="comparison">
+          <article>
+            <span class="number">01</span>
+            <h3>Word by word, still in context</h3>
+            <p><i>Hood</i> is not limited to “engine cover.” In <i>under the hood</i>, Wordwise explains that it refers to an underlying mechanism.</p>
+          </article>
+          <article>
+            <span class="number">02</span>
+            <h3>Source and result stay aligned</h3>
+            <p>Model output is checked against deterministic tokens, so words cannot be silently dropped, merged, or rewritten.</p>
+          </article>
+          <article>
+            <span class="number">03</span>
+            <h3>Start where you are reading</h3>
+            <p>Select English in the current app and use one shortcut instead of repeatedly switching tabs, copying, and pasting.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="founder" id="founder">
+        <div class="founder-offer">
+          <p class="offer-label">Founder Beta</p>
+          <h2>Use it for seven days. Then decide.</h2>
+          <p>We are inviting 15 macOS users who read technical English at least three days a week. The first week is free. On day seven, if Wordwise is useful enough to keep, decide whether to make a one-time <strong>CNY 39</strong> Founder payment.</p>
+          <ul>
+            <li>For developers, researchers, and technical writers</li>
+            <li>Local models are free; cloud models use your own API key</li>
+            <li>The source remains MIT licensed; payment covers the signed beta, beta updates, and direct support</li>
+          </ul>
+          <a class="primary-action dark" href="https://github.com/fly1d/wordwise/issues/new?template=founder-beta-en.yml">Apply for one spot</a>
+          <small>Invitations will be sent in application order once the signed build is ready. Applying requires no payment and does not guarantee acceptance.</small>
+        </div>
+        <aside class="privacy-note">
+          <span>Privacy boundary</span>
+          <h3>We do not need to see what you translate.</h3>
+          <p>Applications and usage validation do not collect selected text, documents, API keys, or complete model requests. Local-model content stays on your Mac; cloud mode sends content only to the provider you choose.</p>
+          <a href="https://github.com/fly1d/wordwise/blob/main/docs/validation.md">Read the public validation rules</a>
+        </aside>
+      </section>
+
+      <section class="closing">
+        <p>Not “do you like the idea?”</p>
+        <h2>Use it on real technical English, then answer with behavior.</h2>
+        <a class="primary-action" href="https://github.com/fly1d/wordwise/issues/new?template=founder-beta-en.yml">Apply for Founder Beta</a>
+      </section>
+    </main>
+
+    <footer>
+      <span>Wordwise · 2026</span>
+      <div>
+        <a href="https://github.com/fly1d/wordwise">Source</a>
+        <a href="https://github.com/fly1d/wordwise/blob/main/LICENSE">MIT License</a>
+        <a href="https://github.com/fly1d/wordwise/security">Security</a>
+      </div>
+    </footer>
+  </body>
+</html>
