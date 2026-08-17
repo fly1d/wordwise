@@ -31,6 +31,7 @@ npm run dev
 ## macOS 客户端
 
 首次构建需要 Rust stable 和 Xcode Command Line Tools。
+完整的中文构建与配置步骤见 [docs/building.md](docs/building.md)。
 
 ```bash
 rustup toolchain install stable
