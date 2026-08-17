@@ -13,6 +13,15 @@ test("presents the founder offer and a working application path", async ({ page 
     "href",
     "https://github.com/fly1d/wordwise/issues/new?template=founder-beta.yml",
   );
+  await expect(page.getByRole("link", { name: "立即从源码试用" })).toHaveAttribute(
+    "href",
+    "https://github.com/fly1d/wordwise/blob/main/docs/building.md",
+  );
+  await expect(page.getByText("签名和公证版安装包还没有准备好。")).toBeVisible();
+  await expect(page.getByRole("link", { name: "查看中文构建步骤" })).toHaveAttribute(
+    "href",
+    "https://github.com/fly1d/wordwise/blob/main/docs/building.md",
+  );
 
   const productImage = page.getByRole("img", { name: "逐词应用的翻译结果界面示例" });
   await expect(productImage).toBeVisible();
@@ -42,6 +51,10 @@ test("offers an honest English source-build path and beta application", async ({
   await expect(page.getByRole("link", { name: "Apply for Founder Beta" }).first()).toHaveAttribute(
     "href",
     "https://github.com/fly1d/wordwise/issues/new?template=founder-beta-en.yml",
+  );
+  await expect(page.getByRole("link", { name: "Build from source now" })).toHaveAttribute(
+    "href",
+    "https://github.com/fly1d/wordwise/blob/main/docs/building-en.md",
   );
   await expect(page.getByRole("link", { name: "View build instructions" })).toHaveAttribute(
     "href",
