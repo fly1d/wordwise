@@ -53,6 +53,6 @@
     "vite": "^7.1.1",
     "vitest": "^4.1.10",
     "supertest": "^7.1.4",
-    "@types/supertest": "^6.0.3"
+    "@types/supertest": "^7.2.1"
   }
 }
