@@ -19,7 +19,7 @@
 
 ## Web 开发
 
-需要 Node.js 24 或更高版本。
+需要 Node.js 22.13 或更高版本。
 
 ```bash
 npm ci

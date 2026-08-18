@@ -114,35 +114,61 @@ function parseJsonContent(content: string): unknown {
   return JSON.parse(trimmed.slice(start, end + 1));
 }
 
-function normalizePayload(raw: unknown, tokens: Token[]): TranslationPayload {
+export function normalizePayload(raw: unknown, tokens: Token[]): TranslationPayload {
   if (!raw || typeof raw !== "object") throw new Error("模型返回格式无效");
   const candidate = raw as { fullTranslation?: unknown; segments?: unknown };
   if (typeof candidate.fullTranslation !== "string" || !Array.isArray(candidate.segments)) {
     throw new Error("模型返回缺少译文或逐词结果");
   }
+  if (!candidate.fullTranslation.trim()) throw new Error("模型返回的完整译文为空");
+  if (candidate.segments.length !== tokens.length) {
+    throw new Error(`模型返回了 ${candidate.segments.length} 个词元，预期 ${tokens.length} 个`);
+  }
 
+  const expectedById = new Map(tokens.map((token) => [token.id, token]));
   const byId = new Map<number, Record<string, unknown>>();
   for (const item of candidate.segments) {
-    if (item && typeof item === "object" && typeof (item as { id?: unknown }).id === "number") {
-      byId.set((item as { id: number }).id, item as Record<string, unknown>);
+    if (!item || typeof item !== "object") throw new Error("模型返回了无效的词元");
+
+    const segment = item as Record<string, unknown>;
+    if (!Number.isSafeInteger(segment.id) || (segment.id as number) < 0) {
+      throw new Error("模型返回了无效的词元 ID");
     }
+
+    const id = segment.id as number;
+    if (byId.has(id)) throw new Error(`模型重复返回了词元 ${id}`);
+
+    const expected = expectedById.get(id);
+    if (!expected) throw new Error(`模型返回了未知词元 ${id}`);
+    if (segment.source !== expected.source || segment.kind !== expected.kind) {
+      throw new Error(`模型改写了词元 ${id}: ${expected.source}`);
+    }
+    if (typeof segment.translation !== "string" || !segment.translation.trim()) {
+      throw new Error(`模型没有翻译词元 ${id}`);
+    }
+
+    byId.set(id, segment);
   }
 
   const segments: Segment[] = tokens.map((token) => {
     const translated = byId.get(token.id);
-    if (!translated || typeof translated.translation !== "string") {
+    if (!translated) {
       throw new Error(`模型漏掉了词元 ${token.id}: ${token.source}`);
+    }
+    const translation = translated.translation;
+    if (typeof translation !== "string") {
+      throw new Error(`模型没有翻译词元 ${token.id}`);
     }
     return {
       ...token,
-      translation: translated.translation,
+      translation,
       ...(typeof translated.note === "string" && translated.note
         ? { note: translated.note }
         : {}),
     };
   });
 
-  return { fullTranslation: candidate.fullTranslation, segments };
+  return { fullTranslation: candidate.fullTranslation.trim(), segments };
 }
 
 async function translateWithOllama(

@@ -327,15 +327,49 @@ fn parse_json_content(content: &str) -> Result<Value, String> {
 fn normalize(value: Value, tokens: &[Token]) -> Result<(String, Vec<Segment>), String> {
     let full_translation = value["fullTranslation"]
         .as_str()
+        .filter(|value| !value.trim().is_empty())
         .ok_or("模型返回缺少 fullTranslation")?
+        .trim()
         .to_owned();
     let items = value["segments"]
         .as_array()
         .ok_or("模型返回缺少 segments")?;
-    let by_id: HashMap<usize, &Value> = items
-        .iter()
-        .filter_map(|item| item["id"].as_u64().map(|id| (id as usize, item)))
-        .collect();
+    if items.len() != tokens.len() {
+        return Err(format!(
+            "模型返回了 {} 个词元，预期 {} 个",
+            items.len(),
+            tokens.len()
+        ));
+    }
+
+    let expected_by_id: HashMap<usize, &Token> =
+        tokens.iter().map(|token| (token.id, token)).collect();
+    let mut by_id = HashMap::with_capacity(items.len());
+    for item in items {
+        let raw_id = item["id"].as_u64().ok_or("模型返回了无效的词元 ID")?;
+        let id = usize::try_from(raw_id).map_err(|_| "模型返回了无效的词元 ID")?;
+        if by_id.contains_key(&id) {
+            return Err(format!("模型重复返回了词元 {id}"));
+        }
+
+        let expected = expected_by_id
+            .get(&id)
+            .ok_or_else(|| format!("模型返回了未知词元 {id}"))?;
+        if item["source"].as_str() != Some(expected.source.as_str())
+            || item["kind"].as_str() != Some(expected.kind.as_str())
+        {
+            return Err(format!("模型改写了词元 {id}: {}", expected.source));
+        }
+        if item["translation"]
+            .as_str()
+            .filter(|value| !value.trim().is_empty())
+            .is_none()
+        {
+            return Err(format!("模型没有翻译词元 {id}"));
+        }
+
+        by_id.insert(id, item);
+    }
 
     let segments = tokens
         .iter()
@@ -345,8 +379,7 @@ fn normalize(value: Value, tokens: &[Token]) -> Result<(String, Vec<Segment>), S
                 .ok_or_else(|| format!("模型漏掉了词元 {}: {}", token.id, token.source))?;
             let translation = item["translation"]
                 .as_str()
-                .filter(|value| !value.is_empty())
-                .ok_or_else(|| format!("模型没有翻译词元 {}", token.id))?;
+                .expect("translation was validated above");
             Ok(Segment {
                 id: token.id,
                 source: token.source.clone(),
@@ -530,8 +563,10 @@ pub async fn desktop_translate(request: TranslationRequest) -> Result<Translatio
 #[cfg(test)]
 mod tests {
     use super::{
-        configured_api_key, endpoint_url, is_official_openai_url, select_auto_engine, AutoEngine,
+        configured_api_key, endpoint_url, is_official_openai_url, normalize, select_auto_engine,
+        tokenize, AutoEngine,
     };
+    use serde_json::json;
 
     #[test]
     fn appends_api_paths_without_string_concatenation() {
@@ -571,5 +606,90 @@ mod tests {
             configured_api_key(Some("  sk-test  ".into())),
             Some("sk-test".into())
         );
+    }
+
+    #[test]
+    fn model_output_must_be_a_strict_token_bijection() {
+        let tokens = tokenize("LLM APIs");
+        let valid = json!({
+            "fullTranslation": "大语言模型 API",
+            "segments": [
+                { "id": 0, "source": "LLM", "kind": "word", "translation": "大语言模型" },
+                { "id": 1, "source": "APIs", "kind": "word", "translation": "应用程序接口" }
+            ]
+        });
+        assert!(normalize(valid.clone(), &tokens).is_ok());
+        let normalize_error = |value| {
+            normalize(value, &tokens)
+                .err()
+                .expect("invalid model output must be rejected")
+        };
+
+        let missing = json!({
+            "fullTranslation": "大语言模型 API",
+            "segments": [valid["segments"][0].clone()]
+        });
+        assert!(normalize_error(missing).contains("预期 2 个"));
+
+        let extra = json!({
+            "fullTranslation": "大语言模型 API",
+            "segments": [
+                valid["segments"][0].clone(),
+                valid["segments"][1].clone(),
+                { "id": 2, "source": ".", "kind": "punctuation", "translation": "。" }
+            ]
+        });
+        assert!(normalize_error(extra).contains("预期 2 个"));
+
+        let duplicate = json!({
+            "fullTranslation": "大语言模型 API",
+            "segments": [
+                valid["segments"][0].clone(),
+                valid["segments"][0].clone()
+            ]
+        });
+        assert!(normalize_error(duplicate).contains("重复返回了词元 0"));
+
+        let unknown = json!({
+            "fullTranslation": "大语言模型 API",
+            "segments": [
+                valid["segments"][0].clone(),
+                { "id": 2, "source": "APIs", "kind": "word", "translation": "应用程序接口" }
+            ]
+        });
+        assert!(normalize_error(unknown).contains("未知词元 2"));
+
+        let rewritten = json!({
+            "fullTranslation": "大语言模型 API",
+            "segments": [
+                valid["segments"][0].clone(),
+                { "id": 1, "source": "API", "kind": "word", "translation": "应用程序接口" }
+            ]
+        });
+        assert!(normalize_error(rewritten).contains("改写了词元 1"));
+
+        let invalid_id = json!({
+            "fullTranslation": "大语言模型 API",
+            "segments": [
+                valid["segments"][0].clone(),
+                { "id": "1", "source": "APIs", "kind": "word", "translation": "应用程序接口" }
+            ]
+        });
+        assert!(normalize_error(invalid_id).contains("无效的词元 ID"));
+
+        let blank_full_translation = json!({
+            "fullTranslation": " ",
+            "segments": valid["segments"].clone()
+        });
+        assert!(normalize_error(blank_full_translation).contains("缺少 fullTranslation"));
+
+        let blank_translation = json!({
+            "fullTranslation": "大语言模型 API",
+            "segments": [
+                valid["segments"][0].clone(),
+                { "id": 1, "source": "APIs", "kind": "word", "translation": " " }
+            ]
+        });
+        assert!(normalize_error(blank_translation).contains("没有翻译词元 1"));
     }
 }

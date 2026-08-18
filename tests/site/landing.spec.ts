@@ -1,22 +1,25 @@
 import { expect, test } from "@playwright/test";
 
-test("presents the founder offer and a working application path", async ({ page }) => {
+test("leads with the available source build and labels the signed-beta waitlist", async ({ page }) => {
   await page.goto("/");
 
   await expect(page).toHaveTitle(/逐词 Wordwise/);
   await expect(page.getByRole("heading", { level: 1, name: "逐词 Wordwise" })).toBeVisible();
-  await expect(page.getByText("先用七天，再决定要不要付。")).toBeVisible();
+  await expect(page.getByText("签名版未就绪，先从源码验证价值。")).toBeVisible();
   await expect(page.getByText("¥39", { exact: true })).toBeVisible();
 
-  const applicationLink = page.getByRole("link", { name: "申请首批测试" });
-  await expect(applicationLink).toHaveAttribute(
-    "href",
-    "https://github.com/fly1d/wordwise/issues/new?template=founder-beta.yml",
-  );
-  await expect(page.getByRole("link", { name: "立即从源码试用" })).toHaveAttribute(
+  const sourceLink = page.getByRole("link", { name: "立即从源码试用" });
+  await expect(sourceLink).toHaveAttribute(
     "href",
     "https://github.com/fly1d/wordwise/blob/main/docs/building.md",
   );
+  await expect(page.getByRole("link", { name: "加入签名版候补" }).first()).toHaveAttribute(
+    "href",
+    "https://github.com/fly1d/wordwise/issues/new?template=founder-beta.yml",
+  );
+  await expect(
+    page.getByText("候补登记暂时需要 GitHub 登录，并会创建公开 Issue；", { exact: false }),
+  ).toBeVisible();
   await expect(page.getByText("签名和公证版安装包还没有准备好。")).toBeVisible();
   await expect(page.getByRole("link", { name: "查看中文构建步骤" })).toHaveAttribute(
     "href",
@@ -37,10 +40,10 @@ test("fits the mobile viewport without horizontal overflow", async ({ page }) =>
     content: document.documentElement.scrollWidth,
   }));
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
-  await expect(page.getByRole("link", { name: "登记一个测试名额" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "加入签名版候补" }).last()).toBeVisible();
 });
 
-test("offers an honest English source-build path and beta application", async ({ page }) => {
+test("offers an honest English source-build path and signed-beta waitlist", async ({ page }) => {
   await page.goto("/en/");
 
   await expect(page).toHaveTitle(/Wordwise \| Context-aware/);
@@ -48,7 +51,7 @@ test("offers an honest English source-build path and beta application", async ({
   await expect(page.getByText("The signed and notarized installer is not ready yet.")).toBeVisible();
   await expect(page.getByText("CNY 39", { exact: true })).toBeVisible();
 
-  await expect(page.getByRole("link", { name: "Apply for Founder Beta" }).first()).toHaveAttribute(
+  await expect(page.getByRole("link", { name: "Join the signed-beta waitlist" }).first()).toHaveAttribute(
     "href",
     "https://github.com/fly1d/wordwise/issues/new?template=founder-beta-en.yml",
   );
@@ -81,6 +84,6 @@ test("fits the English page in the mobile viewport", async ({ page }) => {
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
   expect(dimensions.trustTop).toBeLessThan(700);
   expect(dimensions.lastActionBottom).toBeLessThanOrEqual(dimensions.heroBottom);
-  await expect(page.getByRole("link", { name: "Apply for one spot" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Join the signed-beta waitlist" }).last()).toBeVisible();
   await expect(page.getByRole("link", { name: "中文" })).toHaveAttribute("href", "../");
 });
