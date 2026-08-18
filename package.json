@@ -51,7 +51,7 @@
     "tsx": "^4.20.3",
     "typescript": "~5.8.3",
     "vite": "^7.1.1",
-    "vitest": "^3.2.4",
+    "vitest": "^4.1.10",
     "supertest": "^7.1.4",
     "@types/supertest": "^6.0.3"
   }
