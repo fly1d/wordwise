@@ -19,6 +19,8 @@ Public macOS artifacts should not be published without Apple signing and notariz
 - `APPLE_PASSWORD`
 - `APPLE_TEAM_ID`
 
+The release workflow checks that all six secrets are present before reserving a macOS runner. It never prints their values; a missing secret stops the workflow with the secret name and setup guidance.
+
 Unsigned builds are suitable only for local development and internal beta testing because Gatekeeper will warn users.
 
 ## Rollback
