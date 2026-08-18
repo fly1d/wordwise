@@ -142,6 +142,26 @@ test("preserves valid campaign sources and rejects malformed values", async ({ p
   );
 });
 
+test("infers trusted campaign sources from referrers", async ({ page }) => {
+  await page.goto("/en/", { referer: "https://dev.to/fly1d/wordwise" });
+  await expect(page.getByRole("link", { name: "Join the signed-beta waitlist" }).first()).toHaveAttribute(
+    "href",
+    "https://tally.so/r/PdZ9ze?source=dev&language=en",
+  );
+
+  await page.goto("/", { referer: "https://fly1d.hashnode.dev/wordwise" });
+  await expect(page.getByRole("link", { name: "加入签名版候补" }).first()).toHaveAttribute(
+    "href",
+    "https://tally.so/r/PdZ9ze?source=hashnode&language=zh",
+  );
+
+  await page.goto("/", { referer: "https://example.com/wordwise" });
+  await expect(page.getByRole("link", { name: "加入签名版候补" }).first()).toHaveAttribute(
+    "href",
+    "https://tally.so/r/PdZ9ze?source=product-page&language=zh",
+  );
+});
+
 test("fits the English page in the mobile viewport", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   await page.goto("/en/");
