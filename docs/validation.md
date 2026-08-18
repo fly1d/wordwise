@@ -15,6 +15,17 @@ Do not treat downloads, compliments, or GitHub stars as proof that the product s
 
 ## Funnel
 
+Record the acquisition source selected in the Founder Beta application. Evaluate each public channel from the top of the funnel instead of treating all missing demand as a product defect.
+
+| Acquisition step | Evidence |
+| --- | --- |
+| Channel reach | Readers or views reported by the publishing channel |
+| Product interest | Product-page visits or a direct application attributed to that channel |
+| Qualified application | Applicant meets the reading-frequency and macOS criteria |
+| First use | Applicant installs and completes a contextual translation |
+
+Do not optimize the landing page when a channel produced no readers. Do not expand distribution claims when readers reached the page but nobody applied. Inspect the first broken step and change only that step.
+
 | Step | Minimum signal |
 | --- | ---: |
 | Invited target users | 15 |
