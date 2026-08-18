@@ -114,6 +114,12 @@ test("preserves valid campaign sources and rejects malformed values", async ({ p
       "https://tally.so/r/PdZ9ze?source=dev&language=zh",
     );
   }
+  await page.getByRole("link", { name: "EN", exact: true }).click();
+  await expect(page).toHaveURL("/en/?source=dev");
+  await expect(page.getByRole("link", { name: "Join the signed-beta waitlist" }).first()).toHaveAttribute(
+    "href",
+    "https://tally.so/r/PdZ9ze?source=dev&language=en",
+  );
 
   await page.goto("/en/?source=hashnode");
   for (const link of await page.getByRole("link", { name: "Join the signed-beta waitlist" }).all()) {
@@ -122,6 +128,12 @@ test("preserves valid campaign sources and rejects malformed values", async ({ p
       "https://tally.so/r/PdZ9ze?source=hashnode&language=en",
     );
   }
+  await page.getByRole("link", { name: "中文" }).click();
+  await expect(page).toHaveURL("/?source=hashnode");
+  await expect(page.getByRole("link", { name: "加入签名版候补" }).first()).toHaveAttribute(
+    "href",
+    "https://tally.so/r/PdZ9ze?source=hashnode&language=zh",
+  );
 
   await page.goto("/?source=dev%26language%3Den");
   await expect(page.getByRole("link", { name: "加入签名版候补" }).first()).toHaveAttribute(
