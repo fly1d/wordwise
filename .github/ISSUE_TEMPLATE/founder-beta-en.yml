@@ -1,5 +1,5 @@
 name: Founder Beta application (English)
-description: Apply for one of the first 15 macOS beta spots
+description: Apply for one of up to 15 eligible macOS beta spots
 title: "[Founder Beta]: "
 labels: ["founder-beta"]
 body:
@@ -39,6 +39,7 @@ body:
       description: This is used only to identify which public channels reach people who need the product.
       options:
         - DEV Community
+        - Hashnode
         - GitHub
         - Hacker News
         - Reddit

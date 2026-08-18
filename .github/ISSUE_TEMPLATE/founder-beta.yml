@@ -1,5 +1,5 @@
 name: Founder Beta application
-description: Apply for one of the first 15 macOS testing places
+description: Apply for one of up to 15 eligible macOS testing places
 title: "[Founder Beta]: "
 labels: ["founder-beta"]
 body:
@@ -39,6 +39,7 @@ body:
       description: 只用于判断哪些公开渠道能找到真正需要这个工具的人。
       options:
         - DEV Community
+        - Hashnode
         - GitHub
         - Hacker News
         - Reddit

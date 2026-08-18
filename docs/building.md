@@ -5,22 +5,47 @@
 ## 环境要求
 
 - macOS 12 或更高版本
-- Node.js 24 或更高版本
+- Node.js 22.13 或更高版本
 - Rust stable
 - Xcode Command Line Tools
 
-如果还没有 Rust 工具链，先运行：
+先确认命令行工具可用：
+
+```bash
+git --version
+node --version
+rustc --version
+xcode-select -p
+```
+
+如果缺少 Xcode Command Line Tools 或 Rust，分别运行：
+
+```bash
+xcode-select --install
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+Rust 安装完成后重新打开终端，再运行：
 
 ```bash
 rustup toolchain install stable
 ```
 
+Node.js 安装包和其他安装方式见 [Node.js 下载页](https://nodejs.org/zh-cn/download)。运行 `node --version` 时应显示 `v22.13.0` 或更高版本。
+
 ## 运行桌面客户端
 
-在仓库根目录运行：
+克隆仓库并安装锁定版本的依赖：
 
 ```bash
+git clone https://github.com/fly1d/wordwise.git
+cd wordwise
 npm ci
+```
+
+启动桌面客户端：
+
+```bash
 npm run tauri dev
 ```
 
@@ -35,9 +60,23 @@ npm run tauri dev
 - 本机 Ollama，建议使用 `qwen3:4b` 或更大的 Qwen 模型
 - OpenAI 兼容 API 地址和你自己的 API Key
 
+本地模式不需要 API Key。从 [Ollama macOS 下载页](https://ollama.com/download/mac) 安装并启动 Ollama，然后在另一个终端运行：
+
+```bash
+ollama pull qwen3:4b
+```
+
+回到逐词，保留“自动选择”或选择“Ollama 本地”。在任意应用中选中 `What's under the hood?`，按下 `Option + T`。首次成功时应同时看到完整中文译文、逐词结果，以及 `Ollama · qwen3:4b` 引擎标签。
+
 自动模式会先使用可用的 Ollama，再使用已配置的云端 API。两者都不可用时，客户端会提示配置。离线词典是单独的查词模式，不会被冒充成语境整句翻译。
 
 API Key 只保存在应用运行内存中，不会写入浏览器存储或提交到仓库。不要在公开 GitHub Issue 中提交 API Key、选中文字或私有文档。
+
+## 常见阻塞
+
+- 快捷键没有读到选区：检查“系统设置 -> 隐私与安全性 -> 辅助功能”中的逐词权限，然后重新启动开发客户端。
+- 自动模式提示没有引擎：确认 Ollama 应用正在运行，并用 `ollama list` 检查模型是否已经下载。
+- 端口被占用：退出已有的逐词开发进程后重试。
 
 ## 验证修改
 
