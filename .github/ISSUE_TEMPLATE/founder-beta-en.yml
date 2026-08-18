@@ -32,6 +32,23 @@ body:
         - Less than once a week
     validations:
       required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: Where did you find Wordwise?
+      description: This is used only to identify which public channels reach people who need the product.
+      options:
+        - DEV Community
+        - GitHub
+        - Hacker News
+        - Reddit
+        - Juejin
+        - X / Twitter
+        - Search engine
+        - Friend or community recommendation
+        - Other
+    validations:
+      required: true
   - type: textarea
     id: workflow
     attributes:

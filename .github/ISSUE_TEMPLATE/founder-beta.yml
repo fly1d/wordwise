@@ -32,6 +32,23 @@ body:
         - 少于每周 1 天
     validations:
       required: true
+  - type: dropdown
+    id: source
+    attributes:
+      label: 你是从哪里看到逐词的？
+      description: 只用于判断哪些公开渠道能找到真正需要这个工具的人。
+      options:
+        - DEV Community
+        - GitHub
+        - Hacker News
+        - Reddit
+        - 掘金
+        - X / Twitter
+        - 搜索引擎
+        - 朋友或社区推荐
+        - 其他
+    validations:
+      required: true
   - type: textarea
     id: workflow
     attributes:
