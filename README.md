@@ -9,6 +9,8 @@
 
 产品介绍与 Founder Beta 申请：[fly1d.github.io/wordwise](https://fly1d.github.io/wordwise/?source=github)
 
+[![逐词 Wordwise 的整段翻译与逐词语境解释界面](site/assets/wordwise-app.png)](https://fly1d.github.io/wordwise/?source=github)
+
 ## 功能
 
 - macOS 中选中文字后按 `⌥ + T`，打开客户端并立即翻译
