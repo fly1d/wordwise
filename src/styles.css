@@ -397,6 +397,17 @@ textarea::placeholder { color: #a1a8a3; }
 .settings-group label:has(input[type="password"]) { grid-column: 1 / -1; }
 .settings-group input { width: 100%; height: 36px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: #fff; color: var(--ink); font-size: 12px; }
 
+.shortcut-settings { grid-template-columns: 1fr; }
+.settings-group .shortcut-toggle { flex-direction: row; align-items: center; gap: 10px; color: var(--ink); }
+.settings-group .shortcut-toggle input { width: 16px; height: 16px; flex: 0 0 auto; padding: 0; accent-color: var(--green); }
+.shortcut-toggle > span { display: flex; flex-direction: column; gap: 3px; }
+.shortcut-toggle strong { font-size: 12px; }
+.shortcut-toggle small, .shortcut-recorder small { color: var(--muted); font-size: 10px; line-height: 1.4; }
+.shortcut-recorder { display: grid; grid-template-columns: minmax(0, 1fr) 36px; align-items: end; gap: 8px; }
+.shortcut-input { cursor: text; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.shortcut-input:disabled { cursor: not-allowed; background: var(--surface); color: var(--muted); }
+.shortcut-error { margin: 0; color: var(--red); font-size: 10px; line-height: 1.4; }
+
 .dialog-footer { min-height: 64px; justify-content: space-between; gap: 16px; padding: 10px 22px; color: var(--muted); font-size: 10px; }
 .dialog-footer .primary-button { min-width: 92px; }
 

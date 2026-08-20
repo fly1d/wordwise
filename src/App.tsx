@@ -13,14 +13,23 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { extractFileText } from "./documents";
 import {
   getEngineStatus,
   isDesktopApp,
-  registerSelectionShortcut,
+  configureSelectionShortcut,
   requestTranslation,
+  SelectionShortcutConfigurationError,
 } from "./platform";
+import {
+  DEFAULT_SELECTION_SHORTCUT,
+  formatSelectionShortcut,
+  readSelectionShortcutSettings,
+  saveSelectionShortcutSettings,
+  shortcutFromKeyboardEvent,
+} from "./shortcut";
+import type { SelectionShortcutSettings } from "./shortcut";
 import type {
   EngineSettings,
   Provider,
@@ -41,10 +50,12 @@ const DEFAULT_SETTINGS: EngineSettings = {
 
 const PROVIDER_LABELS: Record<Provider, string> = {
   auto: "自动选择",
-  ollama: "Ollama 本地",
+  ollama: "Ollama",
   openai: "云端模型",
   dictionary: "极速词典",
 };
+
+type ShortcutRegistrationStatus = "registering" | "registered" | "disabled" | "failed";
 
 function readSavedSettings(): EngineSettings {
   try {
@@ -76,6 +87,9 @@ export default function App() {
   const [text, setText] = useState(SAMPLE);
   const [result, setResult] = useState<TranslationResult | null>(null);
   const [settings, setSettings] = useState<EngineSettings>(readSavedSettings);
+  const [selectionShortcut, setSelectionShortcut] = useState<SelectionShortcutSettings>(
+    readSelectionShortcutSettings,
+  );
   const [status, setStatus] = useState<ServerStatus | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -84,8 +98,17 @@ export default function App() {
   const [fileName, setFileName] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [shortcutBusy, setShortcutBusy] = useState(false);
+  const [shortcutError, setShortcutError] = useState("");
+  const [shortcutRegistrationStatus, setShortcutRegistrationStatus] = useState<ShortcutRegistrationStatus>(
+    selectionShortcut.enabled ? "registering" : "disabled",
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const settingsRef = useRef(settings);
+  const statusRef = useRef(status);
+  const selectionRequestInFlight = useRef(false);
+  const shortcutOperationInFlight = useRef(false);
+  const shortcutGlobalError = useRef("");
 
   const tokenCount = useMemo(
     () => text.match(/\p{L}+(?:['’]\p{L}+)*|\p{N}+(?:[.,]\p{N}+)*|[^\s]/gu)?.length ?? 0,
@@ -116,28 +139,63 @@ export default function App() {
   }, [settings]);
 
   useEffect(() => {
-    let removeShortcut: () => void = () => undefined;
+    statusRef.current = status;
+  }, [status]);
+
+  const handleSelectedText = useCallback(async (selectedText: string) => {
+    if (selectionRequestInFlight.current) return;
+    selectionRequestInFlight.current = true;
+    setText(selectedText);
+    setFileName("");
+    setResult(null);
+
+    try {
+      const activeSettings = settingsRef.current;
+      if (needsModelConfiguration(activeSettings, statusRef.current)) {
+        setSettingsOpen(true);
+        return;
+      }
+      await translateValue(selectedText, activeSettings);
+    } finally {
+      selectionRequestInFlight.current = false;
+    }
+  }, []);
+
+  const handleSelectionError = useCallback((message: string) => {
+    shortcutGlobalError.current = "";
+    setError(message);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
-    void registerSelectionShortcut(
-      async (selectedText) => {
-        if (cancelled) return;
-        setText(selectedText);
-        setFileName("");
-        setResult(null);
-        await translateValue(selectedText, settingsRef.current);
-      },
-      (message) => setError(message),
-    ).then((remove) => {
-      if (cancelled) remove();
-      else removeShortcut = remove;
-    }).catch((caught) => {
-      setError(caught instanceof Error ? caught.message : "全局快捷键注册失败");
+    void configureSelectionShortcut(
+      selectionShortcut.enabled ? selectionShortcut.accelerator : null,
+      handleSelectedText,
+      handleSelectionError,
+    ).then(() => {
+      if (!cancelled) {
+        setShortcutRegistrationStatus(selectionShortcut.enabled ? "registered" : "disabled");
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setShortcutRegistrationStatus("failed");
+        const message = selectionShortcut.enabled
+          ? `无法注册 ${formatSelectionShortcut(selectionShortcut.accelerator)}，可能已被其他应用占用`
+          : "无法关闭选区快捷键";
+        shortcutGlobalError.current = message;
+        setShortcutError(message);
+        setError(message);
+      }
     });
 
     return () => {
       cancelled = true;
-      removeShortcut();
+      void configureSelectionShortcut(
+        null,
+        handleSelectedText,
+        handleSelectionError,
+      ).catch(() => undefined);
     };
   }, []);
 
@@ -214,6 +272,69 @@ export default function App() {
     setSettings((current) => ({ ...current, [key]: value }));
   }
 
+  async function applySelectionShortcut(next: SelectionShortcutSettings) {
+    if (shortcutOperationInFlight.current) return;
+    shortcutOperationInFlight.current = true;
+    setShortcutBusy(true);
+    setShortcutError("");
+    setShortcutRegistrationStatus("registering");
+    try {
+      await configureSelectionShortcut(
+        next.enabled ? next.accelerator : null,
+        handleSelectedText,
+        handleSelectionError,
+      );
+      setSelectionShortcut(next);
+      setShortcutRegistrationStatus(next.enabled ? "registered" : "disabled");
+
+      const previousGlobalError = shortcutGlobalError.current;
+      shortcutGlobalError.current = "";
+      if (previousGlobalError) {
+        setError((current) => current === previousGlobalError ? "" : current);
+      }
+
+      try {
+        saveSelectionShortcutSettings(next);
+      } catch {
+        setShortcutError("快捷键已应用，但无法保存；下次启动将恢复原设置");
+      }
+    } catch (caught) {
+      const activeAccelerator = caught instanceof SelectionShortcutConfigurationError
+        ? caught.activeAccelerator
+        : selectionShortcut.enabled
+          ? selectionShortcut.accelerator
+          : null;
+      const previousStillActive = selectionShortcut.enabled
+        && activeAccelerator === selectionShortcut.accelerator;
+
+      setShortcutRegistrationStatus(
+        previousStillActive ? "registered" : activeAccelerator ? "failed" : selectionShortcut.enabled ? "failed" : "disabled",
+      );
+
+      let message: string;
+      if (previousStillActive) {
+        message = next.enabled
+          ? `无法注册 ${formatSelectionShortcut(next.accelerator)}，已保留 ${formatSelectionShortcut(selectionShortcut.accelerator)}`
+          : `无法关闭 ${formatSelectionShortcut(selectionShortcut.accelerator)}，原快捷键仍有效`;
+      } else if (!activeAccelerator) {
+        message = selectionShortcut.enabled
+          ? `无法注册 ${formatSelectionShortcut(next.accelerator)}，原快捷键也未能恢复；请重新启用或更换`
+          : `无法注册 ${formatSelectionShortcut(next.accelerator)}，选区快捷键仍为关闭状态`;
+      } else {
+        message = `快捷键配置未完成；当前仍为 ${formatSelectionShortcut(activeAccelerator)}`;
+      }
+      setShortcutError(message);
+
+      if (!previousStillActive && selectionShortcut.enabled) {
+        shortcutGlobalError.current = message;
+        setError(message);
+      }
+    } finally {
+      shortcutOperationInFlight.current = false;
+      setShortcutBusy(false);
+    }
+  }
+
   function resetText() {
     setText("");
     setResult(null);
@@ -225,20 +346,23 @@ export default function App() {
 
   const currentProviderStatus = (() => {
     if (settings.provider === "dictionary") return "仅逐词查义";
-    if (settings.provider === "ollama") return status?.ollama.available ? "本地已连接" : "等待本地模型";
+    if (settings.provider === "ollama") return status?.ollama.available ? "Ollama 可用" : "等待 Ollama";
     if (settings.provider === "openai") {
       return hasEnteredApiKey || status?.openaiConfigured ? "API 已配置" : "需要 API Key";
     }
-    if (status?.ollama.available) return "将使用本地模型";
+    if (status?.ollama.available) return "将使用 Ollama";
     if (hasEnteredApiKey || status?.openaiConfigured) return "将使用云端模型";
     return "需要配置引擎";
   })();
 
-  const needsModelSetup = status !== null
-    && settings.provider === "auto"
-    && !status.ollama.available
-    && !hasEnteredApiKey
-    && !status.openaiConfigured;
+  const needsModelSetup = needsModelConfiguration(settings, status);
+  const shortcutStatusLabel = shortcutRegistrationStatus === "registered"
+    ? "已注册"
+    : shortcutRegistrationStatus === "disabled"
+      ? "已关闭"
+      : shortcutRegistrationStatus === "registering"
+        ? "配置中"
+        : "注册失败";
 
   return (
     <div className="app-shell">
@@ -250,7 +374,7 @@ export default function App() {
         </div>
         <div className="topbar-actions">
           <span className="connection-state"><i />{currentProviderStatus}</span>
-          <button className="icon-button" type="button" title="翻译引擎设置" onClick={() => setSettingsOpen(true)}>
+          <button className="icon-button" type="button" title="设置" onClick={() => setSettingsOpen(true)}>
             <Settings size={18} />
           </button>
         </div>
@@ -282,7 +406,7 @@ export default function App() {
           <div className="setup-banner" role="status">
             <div>
               <strong>先连接一个语境翻译引擎</strong>
-              <span>Ollama 内容留在本机；云端 API 适合立即开始。极速词典只做逐词查义，不会冒充整句翻译。</span>
+              <span>本机 Ollama 内容留在电脑；远程服务适合立即开始。极速词典只做逐词查义，不会冒充整句翻译。</span>
             </div>
             <button className="secondary-button" type="button" onClick={() => setSettingsOpen(true)}>
               <Settings size={16} />配置引擎
@@ -434,7 +558,15 @@ export default function App() {
 
       <footer className="app-footer">
         <span>{isDesktopApp ? "桌面客户端" : "本地优先"}</span>
-        {isDesktopApp && <span>⌥ + T 翻译选中文字</span>}
+        {isDesktopApp && (
+          <span>
+            {shortcutRegistrationStatus === "failed"
+              ? "选区快捷键配置失败"
+              : selectionShortcut.enabled
+              ? `${formatSelectionShortcut(selectionShortcut.accelerator)} 翻译选中文字`
+              : "选区快捷键已关闭"}
+          </span>
+        )}
         <span>Ctrl / ⌘ + Enter 翻译</span>
         <span>单次上限 20,000 字符</span>
       </footer>
@@ -444,11 +576,81 @@ export default function App() {
           <section className="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settings-title" onMouseDown={(event) => event.stopPropagation()}>
             <div className="dialog-heading">
               <div>
-                <h2 id="settings-title">翻译引擎</h2>
-                <p>自动模式使用已配置的 Ollama 或云端 API，不会静默降级为基础词典。</p>
+                <h2 id="settings-title">设置</h2>
+                <p>配置选区快捷键和翻译引擎。自动模式不会静默降级为基础词典。</p>
               </div>
               <button className="icon-button" type="button" title="关闭设置" onClick={() => setSettingsOpen(false)}><X size={18} /></button>
             </div>
+
+            {isDesktopApp && (
+              <div className="settings-group shortcut-settings">
+                <div className="settings-group-title">
+                  <span>选区快捷键</span>
+                  <b className={shortcutRegistrationStatus === "registered" ? "online" : ""}>
+                    {shortcutStatusLabel}
+                  </b>
+                </div>
+                <label className="shortcut-toggle">
+                  <input
+                    type="checkbox"
+                    checked={selectionShortcut.enabled}
+                    disabled={shortcutBusy}
+                    onChange={(event) => void applySelectionShortcut({
+                      ...selectionShortcut,
+                      enabled: event.target.checked,
+                    })}
+                  />
+                  <span>
+                    <strong>选中文字后用快捷键翻译</strong>
+                    <small>关闭后不会注册任何选区翻译快捷键。</small>
+                  </span>
+                </label>
+                <div className="shortcut-recorder">
+                  <label>
+                    <span>快捷键</span>
+                    <input
+                      className="shortcut-input"
+                      aria-label="选区翻译快捷键"
+                      value={formatSelectionShortcut(selectionShortcut.accelerator)}
+                      readOnly
+                      disabled={shortcutBusy}
+                      onKeyDown={(event) => {
+                        if (event.code === "Tab") return;
+                        if (event.code === "Escape") {
+                          event.currentTarget.blur();
+                          return;
+                        }
+                        event.preventDefault();
+                        event.stopPropagation();
+                        const captured = shortcutFromKeyboardEvent(event);
+                        if (captured.error) {
+                          setShortcutError(captured.error);
+                        } else if (captured.accelerator) {
+                          void applySelectionShortcut({
+                            enabled: selectionShortcut.enabled,
+                            accelerator: captured.accelerator,
+                          });
+                        }
+                      }}
+                    />
+                    <small>点按输入框后按新组合键；文字键和 F1-F12 需搭配 ⌘、⌃ 或 ⌥。</small>
+                  </label>
+                  <button
+                    className="icon-button"
+                    type="button"
+                    title="恢复默认快捷键"
+                    disabled={shortcutBusy}
+                    onClick={() => void applySelectionShortcut({
+                      ...DEFAULT_SELECTION_SHORTCUT,
+                      enabled: selectionShortcut.enabled,
+                    })}
+                  >
+                    <RotateCcw size={16} />
+                  </button>
+                </div>
+                {shortcutError && <p className="shortcut-error" role="alert">{shortcutError}</p>}
+              </div>
+            )}
 
             <fieldset className="provider-options">
               <legend>运行方式</legend>
@@ -470,8 +672,8 @@ export default function App() {
             {(settings.provider === "auto" || settings.provider === "ollama") && (
               <div className="settings-group">
                 <div className="settings-group-title">
-                  <span>Ollama 本地模型</span>
-                  <b className={status?.ollama.available ? "online" : ""}>{status?.ollama.available ? "已连接" : "未连接"}</b>
+                  <span>Ollama 模型</span>
+                  <b className={status?.ollama.available ? "online" : ""}>{status?.ollama.available ? "默认地址可用" : "默认地址未连接"}</b>
                 </div>
                 <label>
                   <span>服务地址</span>
@@ -517,7 +719,7 @@ export default function App() {
             )}
 
             <div className="dialog-footer">
-              <span>API Key 不会写入浏览器存储</span>
+              <span>设置保存在本机；API Key 不会写入浏览器存储</span>
               <button className="primary-button" type="button" onClick={() => setSettingsOpen(false)}><Check size={17} />完成</button>
             </div>
           </section>
@@ -530,8 +732,16 @@ export default function App() {
 function providerDescription(provider: Provider, status: ServerStatus | null) {
   switch (provider) {
     case "auto": return "按可用性选择最佳引擎";
-    case "ollama": return status?.ollama.available ? `${status.ollama.models.length} 个本地模型可用` : "数据不离开本机";
+    case "ollama": return status?.ollama.available ? `${status.ollama.models.length} 个默认地址模型可用` : "默认连接本机服务，可修改地址";
     case "openai": return "语境质量高，按 API 用量计费";
     case "dictionary": return "离线逐词查义，不提供可靠整句翻译";
   }
+}
+
+function needsModelConfiguration(settings: EngineSettings, status: ServerStatus | null) {
+  return status !== null
+    && settings.provider === "auto"
+    && !status.ollama.available
+    && !settings.openaiApiKey.trim()
+    && !status.openaiConfigured;
 }
