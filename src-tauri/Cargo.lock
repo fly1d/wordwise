@@ -4712,6 +4712,9 @@ name = "wordwise"
 version = "0.1.0-beta.1"
 dependencies = [
  "core-foundation",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-foundation",
  "regex",
  "reqwest 0.12.28",
  "serde",

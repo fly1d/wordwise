@@ -35,3 +35,9 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm run desktop:check
+      - run: plutil -lint src-tauri/Info.plist src-tauri/Entitlements.plist
+      - run: npm run desktop:build:app
+      - name: Verify bundled Apple Events usage text
+        run: |
+          test "$(/usr/libexec/PlistBuddy -c 'Print :NSAppleEventsUsageDescription' 'src-tauri/target/release/bundle/macos/逐词.app/Contents/Info.plist')" = \
+            '用于在辅助功能接口无法提供选中文字时，控制 System Events 发送复制快捷键。'

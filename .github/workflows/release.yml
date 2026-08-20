@@ -61,6 +61,7 @@ jobs:
           workspaces: src-tauri
       - run: npm ci
       - run: npm run check
+      - run: npm run desktop:check
       - run: npx playwright install chromium
       - run: npm run test:smoke
       - uses: tauri-apps/tauri-action@v1
@@ -78,3 +79,21 @@ jobs:
           releaseBody: "See CHANGELOG.md for details."
           releaseDraft: true
           prerelease: true
+      - name: Verify signed bundle permissions
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_path='src-tauri/target/release/bundle/macos/逐词.app'
+          temp_dir="$(mktemp -d)"
+          trap 'rm -rf "$temp_dir"' EXIT
+          entitlements_path="$temp_dir/entitlements.plist"
+          codesign --verify --deep --strict --verbose=2 "$app_path"
+          signature_details="$(codesign -dv --verbose=4 "$app_path" 2>&1)"
+          grep -Fq 'Authority=Developer ID Application:' <<< "$signature_details"
+          grep -Fxq "TeamIdentifier=$APPLE_TEAM_ID" <<< "$signature_details"
+          codesign -d --xml --entitlements "$entitlements_path" "$app_path"
+          test "$(/usr/libexec/PlistBuddy -c 'Print :NSAppleEventsUsageDescription' "$app_path/Contents/Info.plist")" = \
+            '用于在辅助功能接口无法提供选中文字时，控制 System Events 发送复制快捷键。'
+          test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.security.automation.apple-events' "$entitlements_path")" = true
