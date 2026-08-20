@@ -21,7 +21,7 @@ test("translates every sample token and opens settings", async ({ page }) => {
   await expect(page.getByText("先连接一个语境翻译引擎")).toBeVisible();
   await expect(page.getByRole("button", { name: "配置引擎" })).toBeVisible();
   await page.getByRole("button", { name: "配置后翻译" }).click();
-  await expect(page.getByRole("dialog", { name: "翻译引擎" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "设置" })).toBeVisible();
   await page.getByRole("button", { name: "关闭设置" }).click();
   await page.getByLabel("翻译引擎").selectOption("dictionary");
   await page.getByRole("button", { name: "逐词翻译", exact: true }).click();
@@ -31,10 +31,10 @@ test("translates every sample token and opens settings", async ({ page }) => {
   await expect(page.locator(".segment-row")).toHaveCount(52);
   await expect(page.locator(".segment-row").filter({ hasText: "hood" })).toContainText("内部机制");
 
-  await page.getByRole("button", { name: "翻译引擎设置" }).click();
-  const dialog = page.getByRole("dialog", { name: "翻译引擎" });
+  await page.getByRole("button", { name: "设置" }).click();
+  const dialog = page.getByRole("dialog", { name: "设置" });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole("radio", { name: /Ollama 本地/ })).toBeVisible();
+  await expect(dialog.getByRole("radio", { name: /Ollama/ })).toBeVisible();
   await expect(dialog.getByText("离线逐词查义，不提供可靠整句翻译")).toBeVisible();
 });
 

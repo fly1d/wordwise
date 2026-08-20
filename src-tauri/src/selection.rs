@@ -102,7 +102,7 @@ end try
 
         if !output.status.success() {
             return Err(
-                "无法读取选中文字。请在“系统设置 → 隐私与安全性 → 辅助功能”中允许逐词。".into(),
+                "无法通过复制读取选中文字。请在“系统设置 → 隐私与安全性”中检查逐词的“辅助功能”和“自动化 → System Events”权限。".into(),
             );
         }
 

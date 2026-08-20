@@ -3,9 +3,32 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { register, unregister } from "@tauri-apps/plugin-global-shortcut";
 import type { EngineSettings, ServerStatus, TranslationResult } from "./types";
 
-const SELECTION_SHORTCUT = "Alt+T";
-
 export const isDesktopApp = isTauri();
+
+type SelectionShortcutRegistration = {
+  accelerator: string;
+  onSelection: (text: string) => void | Promise<void>;
+  onError: (message: string) => void;
+};
+
+export class SelectionShortcutConfigurationError extends Error {
+  readonly activeAccelerator: string | null;
+
+  constructor(activeAccelerator: string | null, cause: unknown) {
+    const message = cause instanceof Error
+      ? cause.message
+      : typeof cause === "string"
+        ? cause
+        : "全局快捷键配置失败";
+    super(message, { cause });
+    this.name = "SelectionShortcutConfigurationError";
+    this.activeAccelerator = activeAccelerator;
+  }
+}
+
+let activeSelectionShortcut: SelectionShortcutRegistration | null = null;
+let selectionShortcutQueue = Promise.resolve();
+let selectionCaptureInFlight = false;
 
 async function parseResponse<T>(response: Response): Promise<T> {
   const body = (await response.json()) as T & { error?: string };
@@ -33,28 +56,106 @@ export async function requestTranslation(text: string, settings: EngineSettings)
   return parseResponse<TranslationResult>(response);
 }
 
-export async function registerSelectionShortcut(
+export function configureSelectionShortcut(
+  accelerator: string | null,
   onSelection: (text: string) => void | Promise<void>,
   onError: (message: string) => void,
 ) {
-  if (!isDesktopApp) return () => undefined;
+  if (!isDesktopApp) return Promise.resolve();
 
-  await unregister(SELECTION_SHORTCUT).catch(() => undefined);
-  await register(SELECTION_SHORTCUT, async (event) => {
-    if (event.state !== "Pressed") return;
+  const next = accelerator ? { accelerator, onSelection, onError } : null;
+  const operation = selectionShortcutQueue.then(async () => {
+    const previous = activeSelectionShortcut;
+    if (previous?.accelerator === next?.accelerator) {
+      activeSelectionShortcut = next;
+      return;
+    }
+
     try {
-      const selectedText = await invoke<string>("capture_selected_text");
-      const appWindow = getCurrentWindow();
-      await appWindow.show();
-      await appWindow.setFocus();
-      await onSelection(selectedText);
-    } catch (error) {
-      const message = typeof error === "string" ? error : "无法读取选中的文字";
-      onError(message);
+      if (previous) {
+        await unregister(previous.accelerator);
+        activeSelectionShortcut = null;
+      }
+      if (!next) return;
+
+      await register(next.accelerator, createSelectionShortcutHandler(next.accelerator));
+      activeSelectionShortcut = next;
+    } catch (cause) {
+      if (previous && activeSelectionShortcut === null) {
+        try {
+          await register(
+            previous.accelerator,
+            createSelectionShortcutHandler(previous.accelerator),
+          );
+          activeSelectionShortcut = previous;
+        } catch {
+          activeSelectionShortcut = null;
+        }
+      }
+      throw new SelectionShortcutConfigurationError(
+        activeSelectionShortcut?.accelerator ?? null,
+        cause,
+      );
     }
   });
 
-  return () => {
-    void unregister(SELECTION_SHORTCUT).catch(() => undefined);
+  selectionShortcutQueue = operation.catch(() => undefined);
+  return operation;
+}
+
+function createSelectionShortcutHandler(accelerator: string) {
+  return async (event: { state: "Released" | "Pressed" }) => {
+    if (event.state !== "Pressed" || selectionCaptureInFlight) return;
+    const registration = activeSelectionShortcut;
+    if (!registration || registration.accelerator !== accelerator) return;
+
+    selectionCaptureInFlight = true;
+    try {
+      let selectedText: string;
+      try {
+        selectedText = await invoke<string>("capture_selected_text");
+      } catch (error) {
+        await showAndFocusAppWindow();
+        reportSelectionError(
+          registration,
+          typeof error === "string" ? error : "无法读取选中的文字",
+        );
+        return;
+      }
+
+      const windowReady = await showAndFocusAppWindow();
+      try {
+        await registration.onSelection(selectedText);
+      } catch {
+        reportSelectionError(registration, "无法处理选中的文字");
+      }
+      if (!windowReady) {
+        reportSelectionError(registration, "已读取选中文字，但无法打开逐词窗口");
+      }
+    } finally {
+      selectionCaptureInFlight = false;
+    }
   };
+}
+
+async function showAndFocusAppWindow() {
+  try {
+    const appWindow = getCurrentWindow();
+    const shown = await appWindow.show().then(() => true).catch(() => false);
+    const focused = await appWindow.setFocus().then(() => true).catch(() => false);
+    return shown && focused;
+  } catch {
+    return false;
+  }
+}
+
+function reportSelectionError(
+  registration: SelectionShortcutRegistration,
+  message: string,
+) {
+  try {
+    registration.onError(message);
+  } catch {
+    // A UI callback must not leave the global shortcut channel rejected.
+  }
 }

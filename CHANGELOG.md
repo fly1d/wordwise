@@ -7,6 +7,7 @@ All notable changes are documented here. Versions follow Semantic Versioning.
 ### Added
 
 - macOS desktop shell with global selection translation shortcut.
+- A desktop setting to disable or customize the selection translation shortcut, defaulting to `Option + K`.
 - GitHub pull request, CI, security scanning, dependency updates, and beta release workflows.
 - Automated API and browser smoke coverage.
 
