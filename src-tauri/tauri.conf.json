@@ -34,6 +34,7 @@
     "longDescription": "本地优先的英语逐词翻译工具，支持 macOS 全局快捷键、本地模型、云端模型和文档导入。",
     "macOS": {
       "minimumSystemVersion": "12.0",
+      "entitlements": "Entitlements.plist",
       "infoPlist": "Info.plist"
     }
   }

@@ -4,9 +4,10 @@
 
 1. Update `CHANGELOG.md` and keep the versions in `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json` identical.
 2. Run `npm run check`, `npm run test:smoke`, and `npm run desktop:check`.
-3. Verify selection capture manually with macOS Accessibility permission allowed and denied.
+3. On an unsigned local `.app`, verify the full selection matrix in `docs/testing.md`, including byte-identical multi-representation fallback restoration, denied Automation, no selection, and an extra write after the candidate generation.
 4. Create and push a beta tag such as `v0.1.0-beta.1`.
-5. Review the draft GitHub prerelease and its `.app` / `.dmg` artifacts before publishing.
+5. On the signed and notarized candidate, repeat permission revoke/regrant and first-run TCC checks. Confirm the bundled `NSAppleEventsUsageDescription` and inspect the effective entitlements with `codesign -d --entitlements - <app>`.
+6. Review the draft GitHub prerelease and its `.app` / `.dmg` artifacts before publishing.
 
 ## Signing and notarization
 

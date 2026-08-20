@@ -11,6 +11,10 @@ All notable changes are documented here. Versions follow Semantic Versioning.
 - GitHub pull request, CI, security scanning, dependency updates, and beta release workflows.
 - Automated API and browser smoke coverage.
 
+### Fixed
+
+- Copy fallback now snapshots every declared macOS pasteboard representation, restores it as current-host-only, bounds System Events waits without blocking the app event loop, and quarantines ambiguous post-Copy failures until restart.
+
 ## [0.1.0-beta.1] - 2026-08-11
 
 ### Added

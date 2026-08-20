@@ -51,7 +51,11 @@ npm run tauri dev
 
 Wordwise opens as a native desktop window. Select English in another macOS app and press the default `Option + K` shortcut to capture it. You can disable selection translation or record another key combination in Settings.
 
-The first selection capture requires permission in **System Settings -> Privacy & Security -> Accessibility**. Wordwise first tries the macOS Accessibility API. When an app does not expose its selection there, Wordwise uses a copy fallback, attempts to restore the previous text clipboard, and may also request permission under **Automation -> System Events**. Disabling the shortcut only unregisters the global shortcut; remove Wordwise in macOS System Settings to revoke the permissions themselves.
+The first selection capture requires permission in **System Settings -> Privacy & Security -> Accessibility**. Wordwise first tries the macOS Accessibility API. When an app does not expose its selection there, Wordwise uses a copy fallback and may also request permission under **Automation -> System Events**. The fallback briefly uses the system pasteboard: Wordwise snapshots every pasteboard item and declared representation in memory, then restores them only while `changeCount` still identifies the candidate generation. An additional or unexpected change observed before restoration begins keeps the newer contents and cancels the capture. The snapshot is never sent to a translation engine and is released from memory after capture. Disabling the shortcut only unregisters the global shortcut; remove Wordwise in macOS System Settings to revoke the permissions themselves.
+
+`NSPasteboard` exposes neither writer identity nor an atomic compare-and-swap operation. Wordwise cannot prove that the first generation observed after Command+C came from the target application, and a narrow TOCTOU window remains between the generation check and the restoration write. The implementation protects additional or unexpected changes observed before restoration begins and checks the generation again after clearing. A signed release candidate must still exercise the concurrent-write release checks, and conditional restoration must not be described as an absolute atomic guarantee.
+
+macOS also does not expose whether the original contents used `NSPasteboardContentsCurrentHostOnly`. Wordwise restores snapshots with `CurrentHostOnly` so sensitive local-only contents are not widened to Universal Clipboard. As a consequence, the restoration itself does not make previously syncable contents available to the user's other Apple devices.
 
 ## Configure a translation engine
 
@@ -76,6 +80,7 @@ API keys remain in application memory and are not written to browser storage or 
 
 - The shortcut does not respond: confirm that selection translation is enabled in Settings and that another app has not reserved the key combination.
 - The shortcut cannot read the selection: check Wordwise under **System Settings -> Privacy & Security -> Accessibility**. The copy fallback also needs Wordwise to control System Events under **Automation**. Restart the development app after changing either permission.
+- Wordwise reports that the pasteboard changed: another write occurred after the candidate generation. Wordwise cancels that capture and does not send the candidate text to a translation engine. Check the current pasteboard, quit and reopen Wordwise, then try again.
 - Automatic mode reports that no engine is configured: make sure Ollama is running and use `ollama list` to confirm that the model was downloaded.
 - A development port is already in use: stop the existing Wordwise development process and try again.
 

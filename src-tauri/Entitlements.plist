@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>NSAppleEventsUsageDescription</key>
-  <string>用于在辅助功能接口无法提供选中文字时，控制 System Events 发送复制快捷键。</string>
+  <key>com.apple.security.automation.apple-events</key>
+  <true/>
 </dict>
 </plist>
