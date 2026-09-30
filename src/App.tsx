@@ -109,6 +109,16 @@ export default function App() {
   const selectionRequestInFlight = useRef(false);
   const shortcutOperationInFlight = useRef(false);
   const shortcutGlobalError = useRef("");
+  const translationGeneration = useRef(0);
+  const mounted = useRef(false);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      translationGeneration.current += 1;
+    };
+  }, []);
 
   const tokenCount = useMemo(
     () => text.match(/\p{L}+(?:['’]\p{L}+)*|\p{N}+(?:[.,]\p{N}+)*|[^\s]/gu)?.length ?? 0,
@@ -143,11 +153,11 @@ export default function App() {
   }, [status]);
 
   const handleSelectedText = useCallback(async (selectedText: string) => {
-    if (selectionRequestInFlight.current) return;
+    if (!mounted.current || selectionRequestInFlight.current) return;
     selectionRequestInFlight.current = true;
+    invalidateTranslation();
     setText(selectedText);
     setFileName("");
-    setResult(null);
 
     try {
       const activeSettings = settingsRef.current;
@@ -162,6 +172,7 @@ export default function App() {
   }, []);
 
   const handleSelectionError = useCallback((message: string) => {
+    if (!mounted.current) return;
     shortcutGlobalError.current = "";
     setError(message);
   }, []);
@@ -215,16 +226,27 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKeyDown);
   });
 
+  function invalidateTranslation() {
+    translationGeneration.current += 1;
+    setLoading(false);
+    setResult(null);
+    setError("");
+    return translationGeneration.current;
+  }
+
   async function translateValue(sourceText: string, activeSettings = settings) {
-    if (!sourceText.trim()) return;
+    if (!mounted.current || !sourceText.trim()) return;
+    const generation = ++translationGeneration.current;
+    const isCurrent = () => mounted.current && generation === translationGeneration.current;
     setLoading(true);
     setError("");
     try {
-      setResult(await requestTranslation(sourceText, activeSettings));
+      const nextResult = await requestTranslation(sourceText, activeSettings);
+      if (isCurrent()) setResult(nextResult);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "翻译失败");
+      if (isCurrent()) setError(caught instanceof Error ? caught.message : "翻译失败");
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }
 
@@ -239,17 +261,18 @@ export default function App() {
 
   async function handleFile(file?: File) {
     if (!file || uploading) return;
+    const generation = invalidateTranslation();
+    const isCurrent = () => mounted.current && generation === translationGeneration.current;
     setUploading(true);
-    setError("");
     try {
       const document = await extractFileText(file);
+      if (!isCurrent()) return;
       setText(document.text);
       setFileName(document.fileName);
-      setResult(null);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "文档读取失败");
+      if (isCurrent()) setError(caught instanceof Error ? caught.message : "文档读取失败");
     } finally {
-      setUploading(false);
+      if (mounted.current) setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   }
@@ -336,10 +359,9 @@ export default function App() {
   }
 
   function resetText() {
+    invalidateTranslation();
     setText("");
-    setResult(null);
     setFileName("");
-    setError("");
   }
 
   const hasEnteredApiKey = Boolean(settings.openaiApiKey.trim());
@@ -468,8 +490,8 @@ export default function App() {
               aria-label="英文原文"
               placeholder="输入或粘贴英文"
               onChange={(event) => {
+                invalidateTranslation();
                 setText(event.target.value);
-                setResult(null);
                 setFileName("");
               }}
             />

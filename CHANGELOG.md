@@ -13,6 +13,7 @@ All notable changes are documented here. Versions follow Semantic Versioning.
 
 ### Fixed
 
+- Ignore stale translation results and errors after a new selection, source edit, document import, reset, or unmount; older requests can no longer clear a newer request's loading state.
 - Copy fallback now snapshots every declared macOS pasteboard representation, restores it as current-host-only, bounds System Events waits without blocking the app event loop, and quarantines ambiguous post-Copy failures until restart.
 
 ## [0.1.0-beta.1] - 2026-08-11
