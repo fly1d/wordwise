@@ -57,7 +57,8 @@ test.beforeEach(async ({ page }) => {
     });
   });
   await page.goto("/");
-  await expect(page.getByText("将使用 Ollama", { exact: true })).toBeVisible();
+  // The connection label is intentionally hidden at mobile widths.
+  await expect(page.locator(".connection-state")).toHaveText("将使用 Ollama");
 });
 
 async function startManual(page: Page) {
