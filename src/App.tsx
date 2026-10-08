@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { extractFileText } from "./documents";
+import { applyEngineDefaults, readInitialSettings, serializeSavedSettings } from "./settings";
 import {
   getEngineStatus,
   isDesktopApp,
@@ -39,15 +40,6 @@ import type {
 
 const SAMPLE = `We suggest that developers start by using LLM APIs directly: many patterns can be implemented in a few lines of code. If you do use a framework, ensure you understand the underlying code. Incorrect assumptions about what's under the hood are a common source of customer error.`;
 
-const DEFAULT_SETTINGS: EngineSettings = {
-  provider: "auto",
-  ollamaUrl: "http://127.0.0.1:11434",
-  ollamaModel: "qwen3:4b",
-  openaiBaseUrl: "https://api.openai.com/v1",
-  openaiModel: "gpt-5-mini",
-  openaiApiKey: "",
-};
-
 const PROVIDER_LABELS: Record<Provider, string> = {
   auto: "自动选择",
   ollama: "Ollama",
@@ -57,12 +49,11 @@ const PROVIDER_LABELS: Record<Provider, string> = {
 
 type ShortcutRegistrationStatus = "registering" | "registered" | "disabled" | "failed";
 
-function readSavedSettings(): EngineSettings {
+function readSavedSettings() {
   try {
-    const saved = JSON.parse(localStorage.getItem("wordwise-settings") ?? "{}") as Partial<EngineSettings>;
-    return { ...DEFAULT_SETTINGS, ...saved, openaiApiKey: "" };
+    return readInitialSettings(localStorage.getItem("wordwise-settings"));
   } catch {
-    return DEFAULT_SETTINGS;
+    return readInitialSettings(null);
   }
 }
 
@@ -86,7 +77,9 @@ async function writeClipboard(value: string) {
 export default function App() {
   const [text, setText] = useState(SAMPLE);
   const [result, setResult] = useState<TranslationResult | null>(null);
-  const [settings, setSettings] = useState<EngineSettings>(readSavedSettings);
+  // Capture saved choices before the persistence effect writes initial fallback values.
+  const [initialSettings] = useState(readSavedSettings);
+  const [settings, setSettings] = useState<EngineSettings>(initialSettings.settings);
   const [selectionShortcut, setSelectionShortcut] = useState<SelectionShortcutSettings>(
     readSelectionShortcutSettings,
   );
@@ -105,6 +98,7 @@ export default function App() {
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const settingsRef = useRef(settings);
+  const configuredSettingsFields = useRef(initialSettings.configuredFields);
   const statusRef = useRef(status);
   const selectionRequestInFlight = useRef(false);
   const shortcutOperationInFlight = useRef(false);
@@ -119,17 +113,11 @@ export default function App() {
     getEngineStatus()
       .then((nextStatus) => {
         setStatus(nextStatus);
-        setSettings((current) => ({
-          ...current,
-          ollamaUrl: nextStatus.customEndpointsAllowed
-            ? current.ollamaUrl || nextStatus.defaults.ollamaUrl
-            : nextStatus.defaults.ollamaUrl,
-          ollamaModel: current.ollamaModel || nextStatus.defaults.ollamaModel,
-          openaiBaseUrl: nextStatus.customEndpointsAllowed
-            ? current.openaiBaseUrl || nextStatus.defaults.openaiBaseUrl
-            : nextStatus.defaults.openaiBaseUrl,
-          openaiModel: current.openaiModel || nextStatus.defaults.openaiModel,
-        }));
+        setSettings((current) => applyEngineDefaults(
+          current,
+          nextStatus,
+          configuredSettingsFields.current,
+        ));
       })
       .catch(() => setStatus(null));
   }, []);
@@ -200,8 +188,10 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const { openaiApiKey: _apiKey, ...safeSettings } = settings;
-    localStorage.setItem("wordwise-settings", JSON.stringify(safeSettings));
+    localStorage.setItem("wordwise-settings", serializeSavedSettings(
+      settings,
+      configuredSettingsFields.current,
+    ));
   }, [settings]);
 
   useEffect(() => {
@@ -269,6 +259,8 @@ export default function App() {
   }
 
   function updateSetting<K extends keyof EngineSettings>(key: K, value: EngineSettings[K]) {
+    // An explicit edit remains a choice even when the user returns to a built-in value.
+    configuredSettingsFields.current.add(key);
     setSettings((current) => ({ ...current, [key]: value }));
   }
 

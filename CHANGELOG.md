@@ -13,6 +13,7 @@ All notable changes are documented here. Versions follow Semantic Versioning.
 
 ### Fixed
 
+- First-use engine settings now follow configured model defaults across restarts while preserving saved or newly edited choices; Web service addresses remain controlled by the server.
 - Copy fallback now snapshots every declared macOS pasteboard representation, restores it as current-host-only, bounds System Events waits without blocking the app event loop, and quarantines ambiguous post-Copy failures until restart.
 
 ## [0.1.0-beta.1] - 2026-08-11
